@@ -1,0 +1,49 @@
+============Process for exception count, potential exception value, manual violation========
+
+1. IDFC_bot.py ==> This program downloads the lifecycle reports of the plaza for given dates from IDFC bank portal. It gets plaza and dates info from Reference_File.xlsx file.
+
+2. bulk_zip_extractor.py ==> This program extracts all files in a folder.
+
+3. main_automation_with_excel.py ==> Those extracted files/folders are given to this program which then performs violation lookup on it.
+
+(3.1) First download and merge violation reports for each plaza from db with date range give in excel file. It only downloads from rows where file_status = 1 and file_link is present. It also adds date and shift from DB row and write all violations in a combined file.
+
+(3.2) Exception count from the combined report. First it clears all exceptions (db_column = 'exceptions') for the given date range. From combined report it removes all duplicate entries using "CCH TXN NO" then updated exception count to db. Updates one submissions row per (entity_name, date, shift)
+
+(3.3) Violation lookup with comparison of combined report and downloaded lifecycle files. Takes CCH TXN NO from combined violation report file and comapre it with "Agency Txn Id" column. If values of those columns match then it writes Violation Amt, Reader Read Time and Journey Type from lifecycle file to that combined report file. Rows wich have value 'settled' in "Settlment Type" column are only considered for lookup and couting violation_amt. Set Violation_matched = Yes if violation amount is non zero value, otherwise it sets no. After that it saved the combined report file.
+
+(3.4) Calculate exception values. First program clears exception values for give dates and plaza. Then it counts potential exception values using given rates for each plaza using this calculation : potential_exception_value = rate[Correct_index] - rate[TC_class_index]. Also takes Journey type into account for category of rates. Afte this saves "potential_exception_value" back into combined file.
+
+(3.5) Program updates exception values in db by grouping for one date. Means it counts total for a date and update into db_column = 'exception_value' for only one row.
+
+(3.6) Calculate manual violation. First it clears all manual violation from db_column 'manual_violation' for given date range and plaza. Now it reads combined report file. From Reader Read Time it extracts date n YYYY-MM-DD. For each unique date it counts total Violation Amt (taken from lifecycle file) and updates 'manual_violation' fot that date.
+
+After this completes, it marks plaza as done in Reference_File.xlsx
+
+
+
+
+
+******Reports from YES bank wont's have Agency TXN ID for that set that variable true in main_automation_with_excel.py . They also do not have Journey type so first run add_journey_type_in_report.py for etc file lookup, which will add journey type in it. *************
+
+
+
+
+
+
+
+
+
+===========Approved Violation=====================
+
+1. It reads plaza name and date range from Reference_File.xlsx in same manner as previous process. It do not read dates from excel file, rather it is written inside code.
+
+2. Clears old Approved violation amount from db_column : 'violation_amt'
+
+3. Process each lifecycle file for 'Reader Read Time' and 'Violation Amt'. Counts total violation amount for each date. 
+
+4. Then updates the total for each date in submissions table with following conditions. Skips update if violation_amt already exists, only rows with non-zero exception_value is valid (others are skipped). Updates only one row for one date. 
+
+
+****Important****
+This script must be executed after the previous is completed for same date ranges. Because approved violations are only updated if exception_value exists.

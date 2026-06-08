@@ -1,0 +1,19 @@
+1. Extract the violation report using violation_extractor.py
+
+2. Update number of exceptions using update_exceptions.py
+
+3. Process with Life Cycle report to get manual violation and journey type.
+
+4. Calculate and update exception values using exception_value_count.py
+
+5. Update manual violations from excel file.
+
+
+
+
+
+Check this function update_violation_amt_in_db in extraction.py before updaing violation amount.
+
+
+Manual Violaion --> Value from Life cycle report
+Potential Violation (Exception) --> Calculated based on given rates for each vehicle class

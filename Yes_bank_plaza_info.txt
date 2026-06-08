@@ -1,0 +1,11 @@
+Chhapar
+Not able to login, Password might be incorrect.
+
+
+Mudipar
+Asking for login agin for downloadng reports. Tried to download normal transaction reports but file is empty.
+
+
+
+Nathavalasa
+Only Feb report was available and for feb, and we started sending violations from 23rd May.

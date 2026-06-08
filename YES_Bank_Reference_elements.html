@@ -1,0 +1,440 @@
+<html xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no"><link href="CSS/main.css" rel="stylesheet"><link href="CSS/bootstrap.min.css" rel="stylesheet"><link href="CSS/Searchbox.css" rel="stylesheet">
+    
+    
+    
+
+    <script src="../js/jquery-3.5.1.min.js"></script>
+
+
+    <script src="../JS/Comman.js"></script>
+    <link rel="shortcut icon" href="Images/favicon.png" type="image/x-icon"><link id="ThemesStyle" rel="stylesheet" href="CSSHandler/ColorCode.ashx?Colorcode=#0000CC"><link rel="stylesheet" href="CSS/Menu/assets/css/hm-style.css"><link href="CSS/comman.css" rel="stylesheet"><link href="CSS/Style5.css" rel="stylesheet"><link href="CSS/Dash/palette-gradient.min.css" rel="stylesheet"><link href="CSS/Dash/colors.css" rel="stylesheet"><link href="CSS/Dash/style.min.css" rel="stylesheet"><link href="CSS/Admin-Style.css" rel="stylesheet"><title>
+	:: Trace ::
+</title>
+
+    <script type="text/javascript" src="JS/jquery.min.js"></script>
+
+    <script type="text/javascript">
+        $("[src*=plus]").live("click", function () {
+
+            $(this).closest("tr").after("<tr><td></td><td colspan = '999'>" + $(this).next().html() + "</td></tr>")
+            $(this).attr("src", "../images/minus.png");
+        });
+        $("[src*=minus]").live("click", function () {
+
+            $(this).attr("src", "../images/plus.png");
+            $(this).closest("tr").next().remove();
+        });
+    </script>
+
+
+
+    <script type="text/javascript">
+        function reloadPage() {
+            window.location.reload()
+        }
+</script>
+    
+<link href="/WebResource.axd?d=QygwMQZzIIofqDLXDr-HEAXsKVqLpwZUhWRgDVTkhI6BC68S72Ps93rtUEEfuOIl1CQyoozprdrdnfIOLsAcJFFWRHDMkbCnQcFmLPbthVIJ9x3nsbrs-adVjcgJ3bANlKSJnJPyGrT72gobLkkCZQ2&amp;t=639088442670365263" type="text/css" rel="stylesheet"></head>
+<body id="someBody">
+    <form method="post" action="./RevenueReport.aspx" onsubmit="javascript:return WebForm_OnSubmit();" id="form1" autocomplete="off">
+<div class="aspNetHidden">
+<input type="hidden" name="MainContentPlaceHolder_ToolkitScriptManager1_HiddenField" id="MainContentPlaceHolder_ToolkitScriptManager1_HiddenField" value=";;AjaxControlToolkit, Version=4.1.50731.0, Culture=neutral, PublicKeyToken=28f01b0e84b6d53e:de-DE:f8fb2a65-e23a-483b-b20e-6db6ef539a22:de1feab2:fcf0e993:f2c8e708:720a52bf:f9cec9bc:589eaa30:698129cf:fb9b4c57:ccb96cf9">
+<input type="hidden" name="__EVENTTARGET" id="__EVENTTARGET" value="">
+<input type="hidden" name="__EVENTARGUMENT" id="__EVENTARGUMENT" value="">
+<input type="hidden" name="__LASTFOCUS" id="__LASTFOCUS" value="">
+<input type="hidden" name="__VIEWSTATE" id="__VIEWSTATE" value="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">
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+var theForm = document.forms['form1'];
+if (!theForm) {
+    theForm = document.form1;
+}
+function __doPostBack(eventTarget, eventArgument) {
+    if (!theForm.onsubmit || (theForm.onsubmit() != false)) {
+        theForm.__EVENTTARGET.value = eventTarget;
+        theForm.__EVENTARGUMENT.value = eventArgument;
+        theForm.submit();
+    }
+}
+//]]>
+</script>
+
+
+<script src="/WebResource.axd?d=pynGkmcFUV13He1Qd6_TZCFZSO9oBUpNHXovW8w0nXqJ0J8q5tyukg90n_mAYRpvSnLfTzVc8p1i1XKzsw1CXQ2&amp;t=637814858020000000" type="text/javascript"></script>
+
+
+<script src="/ScriptResource.axd?d=nv7asgRUU0tRmHNR2D6t1KDxveDypUtSPMi975tV3y6ljRHnaoLIqSmuKgf9_vdv6vKaOX7Eiq1hTTBwnZBMeo-AAxOtlkDeIi4hueiizAIORW5auZxTja4UP3vy54W4nq9iyb7sVVJRqHlVyjt3NQ2&amp;t=ffffffff866f772c" type="text/javascript"></script>
+<script src="/ScriptResource.axd?d=x6wALODbMJK5e0eRC_p1LRUGSnxnNW2QgBWaOSCMjFwVAz34OuEHZtZmVi3Fq90d3JKIVXFxRXthLNq9Tpn1Bgpzl6XBEBltaPXLM_eCfG0Vuyv557qVYeyFujjwofsE0&amp;t=27117261" type="text/javascript"></script>
+<script src="/ScriptResource.axd?d=P5lTttoqSeZXoYRLQMIScJVNLqtP3-PeltMEwOHc9sTPMzr3yjenYZrJ55B87OrZyXgWBhzp_EThzx6OFvOzk9vd24gZ6Gy2o4xV6-Yw3k4lKA5RAbCHttPCYEJwxHp10&amp;t=27117261" type="text/javascript"></script>
+<script src="/RevenueReport.aspx?_TSM_HiddenField_=MainContentPlaceHolder_ToolkitScriptManager1_HiddenField&amp;_TSM_CombinedScripts_=%3b%3bAjaxControlToolkit%2c+Version%3d4.1.50731.0%2c+Culture%3dneutral%2c+PublicKeyToken%3d28f01b0e84b6d53e%3ade-DE%3af8fb2a65-e23a-483b-b20e-6db6ef539a22%3ade1feab2%3afcf0e993%3af2c8e708%3a720a52bf%3af9cec9bc%3a589eaa30%3a698129cf%3afb9b4c57%3accb96cf9" type="text/javascript"></script>
+<script type="text/javascript">
+//<![CDATA[
+function WebForm_OnSubmit() {
+if (typeof(ValidatorOnSubmit) == "function" && ValidatorOnSubmit() == false) return false;
+return true;
+}
+//]]>
+</script>
+
+<div class="aspNetHidden">
+
+	<input type="hidden" name="__VIEWSTATEGENERATOR" id="__VIEWSTATEGENERATOR" value="4D16274C">
+	<input type="hidden" name="__VIEWSTATEENCRYPTED" id="__VIEWSTATEENCRYPTED" value="">
+</div>
+        <div id="outer" class="ContentContainer">
+            <div class="row">
+                <div class="col-sm-12 col-md-12 col-xs-12 maincontenter">
+                    <div class="col-sm-3 col-md-3 col-xs-3">
+                        <br>
+
+                        
+                        <div id="FormPanel">
+	
+                            <img id="hfdImageSource1" class="img-responsive">
+                        <div>
+		<img src="Images/Logo/MainLogo.png">
+	</div>
+</div>
+                    </div>
+                    <div class="col-sm-5 col-md-5 col-xs-5">
+                    </div>
+                    <div class="col-sm-4 col-md-4 col-xs-4">
+                        <div class="col-sm-6 col-md-6 col-xs-6">
+
+                            <p class="Logout">
+                                <span id="lblWelcome">Welcome</span>
+                                <span id="UserDisplayNameLabel">CN000002_NEW</span>
+                                
+                                <a id="lnkLogOut" href="javascript:__doPostBack('ctl00$lnkLogOut','')" style="color:#CC3300;text-decoration:underline;">Logout</a>
+                            </p>
+
+
+                            
+                            
+
+                        </div>
+                        <div class="col-sm-6 col-md-6 col-xs-6">
+                            <div>
+                                <a id="HyperLink1" class="logo" href="http://www.maximusinfoware.com/" target="_blank"><img src="Images/Trace.png" alt=""></a>
+                                <span id="lblTest"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!---- Menu Start ----------->
+        <div class="menu-container">
+            <div class="menu">
+                
+                        <ul>
+                            <li>
+                                <b><a href="HomePage.aspx">Home</a></b>
+                            </li>
+                           
+                    
+                        <li class="menu-dropdown-icon">
+                            
+                            <b><a href="#">MIS Reports</a></b>
+                            <ul class="pullDown normal-sub"><li><a href="FastTagSummaryReport.aspx">FastTag Summary Report</a></li><li><a href="RevenueReport.aspx">Revenue Report</a></li><li><a href="RevenueTransactionDate.aspx">Revenue Report Txns Datewise</a></li><li><a href="DisputesummaryReport.aspx">Dispute Summary Report</a></li></ul>
+                        </li>
+                    
+                        </ul>                       
+                    
+            </div>
+        </div>
+        <!---- Menu Ends ----------->
+        <div>
+            
+        </div>
+
+        <div class="clr"></div>
+
+        
+
+
+        <div>
+            
+    <script type="text/javascript">
+//<![CDATA[
+Sys.WebForms.PageRequestManager._initialize('ctl00$MainContentPlaceHolder$ToolkitScriptManager1', 'form1', ['tctl00$MainContentPlaceHolder$Main','MainContentPlaceHolder_Main'], ['ctl00$MainContentPlaceHolder$grdView','MainContentPlaceHolder_grdView'], ['ctl00$MainContentPlaceHolder$btnExcel1','MainContentPlaceHolder_btnExcel1','ctl00$MainContentPlaceHolder$btnShow','MainContentPlaceHolder_btnShow'], 90, 'ctl00');
+//]]>
+</script>
+
+
+    <br>
+
+    <div id="content-header">
+        <br>
+        <div class="clr"></div>
+        <div id="breadcrumb">
+
+            <a href="HomePage.aspx" title="Go to Home" class="tip-bottom" style="font-size: small"><i class="icon-home" style="font-size: small"></i>Home</a>
+            
+            <i class="icon-arrow-right" style="font-size: smaller"></i>&nbsp; MIS Reports 
+           &nbsp;&nbsp;&nbsp;<i class="icon-arrow-right" style="font-size: smaller"></i>&nbsp; Revenue Report  
+
+        </div>
+    </div>
+
+    <div id="MainContentPlaceHolder_Main">
+	
+
+            <div class="row">
+                <div class="container-fluid">
+                    <div class="row-fluid">
+                        <div class="span12">
+                            <div class="widget-box">
+                                <div class="widget-title">
+                                    <span class="icon">
+                                        <i class="icon-eye"></i>
+                                    </span>
+                                    <h5>Revenue Report</h5>
+                                </div>
+                                <div class="widget-content nopadding">
+                                    <div id="form-wizard" class="form-horizontal" method="post">
+                                        <div id="form-wizard-1" class="step">
+                                            <div class="col-sm-12 form-group"></div>
+
+                                            <div>
+                                                <h4><b>&nbsp;&nbsp;&nbsp; The Date Range represents Settlement Date</b></h4>
+                                            </div>
+
+                                            <div class="row">
+
+                                                <div class="col-sm-2 form-group">
+                                                    <label>Client Name:<span class="err">*</span></label>
+                                                    <select name="ctl00$MainContentPlaceHolder$ddlClient" onchange="javascript:setTimeout('__doPostBack(\'ctl00$MainContentPlaceHolder$ddlClient\',\'\')', 0)" id="MainContentPlaceHolder_ddlClient" class="form-control">
+		<option value="0">--Select--</option>
+		<option selected="selected" value="10052">Galia</option>
+
+	</select>
+                                                    <span id="MainContentPlaceHolder_ReqddlClient" style="color:Red;visibility:hidden;">Required</span>
+                                                </div>
+
+                                                
+
+                                                
+                                                
+
+                                                
+
+                                                <div class="col-sm-2 form-group">
+                                                    <label>From Date:<span class="err">*</span></label>
+                                                    <input name="ctl00$MainContentPlaceHolder$txtFromDate" type="text" value="01/02/2026" onchange="javascript:setTimeout('__doPostBack(\'ctl00$MainContentPlaceHolder$txtFromDate\',\'\')', 0)" onkeypress="if (WebForm_TextBoxKeyHandler(event) == false) return false;" id="MainContentPlaceHolder_txtFromDate" class="form-control" autocomplete="off" onkeyup="return valid1(event)" onblur="return valid1(event)" readonly="readonly">
+                                                    
+                                                <div id="MainContentPlaceHolder_cetxtFromDate_container" class="ajax__calendar" style="visibility: hidden; position: absolute; left: 15px; top: 53px; z-index: 1000; display: none;"><div id="MainContentPlaceHolder_cetxtFromDate_popupDiv" class="ajax__calendar_container"><div id="MainContentPlaceHolder_cetxtFromDate_header" class="ajax__calendar_header"><div class=""><div id="MainContentPlaceHolder_cetxtFromDate_prevArrow" class="ajax__calendar_prev"></div></div><div><div id="MainContentPlaceHolder_cetxtFromDate_nextArrow" class="ajax__calendar_next"></div></div><div class=""><div id="MainContentPlaceHolder_cetxtFromDate_title" class="ajax__calendar_title">February, 2026</div></div></div><div id="MainContentPlaceHolder_cetxtFromDate_body" class="ajax__calendar_body"><div id="MainContentPlaceHolder_cetxtFromDate_days" class="ajax__calendar_days" style="position: absolute; left: 0px; top: 0px;"><table id="MainContentPlaceHolder_cetxtFromDate_daysTable" cellpadding="0" cellspacing="0" border="0" style="margin: auto;"><thead id="MainContentPlaceHolder_cetxtFromDate_daysTableHeader"><tr id="MainContentPlaceHolder_cetxtFromDate_daysTableHeaderRow"><td><div class="ajax__calendar_dayname">Su</div></td><td><div class="ajax__calendar_dayname">Mo</div></td><td><div class="ajax__calendar_dayname">Tu</div></td><td><div class="ajax__calendar_dayname">We</div></td><td><div class="ajax__calendar_dayname">Th</div></td><td><div class="ajax__calendar_dayname">Fr</div></td><td><div class="ajax__calendar_dayname">Sa</div></td></tr></thead><tbody id="MainContentPlaceHolder_cetxtFromDate_daysBody"><tr><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_0_0" class="ajax__calendar_day" title="Sunday, January 25, 2026">25</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_0_1" class="ajax__calendar_day" title="Monday, January 26, 2026">26</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_0_2" class="ajax__calendar_day" title="Tuesday, January 27, 2026">27</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_0_3" class="ajax__calendar_day" title="Wednesday, January 28, 2026">28</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_0_4" class="ajax__calendar_day" title="Thursday, January 29, 2026">29</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_0_5" class="ajax__calendar_day" title="Friday, January 30, 2026">30</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_0_6" class="ajax__calendar_day" title="Saturday, January 31, 2026">31</div></td></tr><tr><td class="ajax__calendar_active"><div id="MainContentPlaceHolder_cetxtFromDate_day_1_0" class="ajax__calendar_day" title="Sunday, February 01, 2026">1</div></td><td class=""><div id="MainContentPlaceHolder_cetxtFromDate_day_1_1" class="ajax__calendar_day" title="Monday, February 02, 2026">2</div></td><td class=""><div id="MainContentPlaceHolder_cetxtFromDate_day_1_2" class="ajax__calendar_day" title="Tuesday, February 03, 2026">3</div></td><td class=""><div id="MainContentPlaceHolder_cetxtFromDate_day_1_3" class="ajax__calendar_day" title="Wednesday, February 04, 2026">4</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_1_4" class="ajax__calendar_day" title="Thursday, February 05, 2026">5</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_1_5" class="ajax__calendar_day" title="Friday, February 06, 2026">6</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_1_6" class="ajax__calendar_day" title="Saturday, February 07, 2026">7</div></td></tr><tr><td><div id="MainContentPlaceHolder_cetxtFromDate_day_2_0" class="ajax__calendar_day" title="Sunday, February 08, 2026">8</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_2_1" class="ajax__calendar_day" title="Monday, February 09, 2026">9</div></td><td class=""><div id="MainContentPlaceHolder_cetxtFromDate_day_2_2" class="ajax__calendar_day" title="Tuesday, February 10, 2026">10</div></td><td class=""><div id="MainContentPlaceHolder_cetxtFromDate_day_2_3" class="ajax__calendar_day" title="Wednesday, February 11, 2026">11</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_2_4" class="ajax__calendar_day" title="Thursday, February 12, 2026">12</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_2_5" class="ajax__calendar_day" title="Friday, February 13, 2026">13</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_2_6" class="ajax__calendar_day" title="Saturday, February 14, 2026">14</div></td></tr><tr><td><div id="MainContentPlaceHolder_cetxtFromDate_day_3_0" class="ajax__calendar_day" title="Sunday, February 15, 2026">15</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_3_1" class="ajax__calendar_day" title="Monday, February 16, 2026">16</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_3_2" class="ajax__calendar_day" title="Tuesday, February 17, 2026">17</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_3_3" class="ajax__calendar_day" title="Wednesday, February 18, 2026">18</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_3_4" class="ajax__calendar_day" title="Thursday, February 19, 2026">19</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_3_5" class="ajax__calendar_day" title="Friday, February 20, 2026">20</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_3_6" class="ajax__calendar_day" title="Saturday, February 21, 2026">21</div></td></tr><tr><td><div id="MainContentPlaceHolder_cetxtFromDate_day_4_0" class="ajax__calendar_day" title="Sunday, February 22, 2026">22</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_4_1" class="ajax__calendar_day" title="Monday, February 23, 2026">23</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_4_2" class="ajax__calendar_day" title="Tuesday, February 24, 2026">24</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_4_3" class="ajax__calendar_day" title="Wednesday, February 25, 2026">25</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_4_4" class="ajax__calendar_day" title="Thursday, February 26, 2026">26</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_4_5" class="ajax__calendar_day" title="Friday, February 27, 2026">27</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_day_4_6" class="ajax__calendar_day" title="Saturday, February 28, 2026">28</div></td></tr><tr><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_5_0" class="ajax__calendar_day" title="Sunday, March 01, 2026">1</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_5_1" class="ajax__calendar_day" title="Monday, March 02, 2026">2</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_5_2" class="ajax__calendar_day" title="Tuesday, March 03, 2026">3</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_5_3" class="ajax__calendar_day" title="Wednesday, March 04, 2026">4</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_5_4" class="ajax__calendar_day" title="Thursday, March 05, 2026">5</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_5_5" class="ajax__calendar_day" title="Friday, March 06, 2026">6</div></td><td class="ajax__calendar_other"><div id="MainContentPlaceHolder_cetxtFromDate_day_5_6" class="ajax__calendar_day" title="Saturday, March 07, 2026">7</div></td></tr></tbody></table></div><div id="MainContentPlaceHolder_cetxtFromDate_months" class="ajax__calendar_months" style="display: none; visibility: hidden;"><table id="MainContentPlaceHolder_cetxtFromDate_monthsTable" cellpadding="0" cellspacing="0" border="0" style="margin: auto;"><tbody id="MainContentPlaceHolder_cetxtFromDate_monthsBody"><tr><td><div id="MainContentPlaceHolder_cetxtFromDate_month_0_0" class="ajax__calendar_month"><br>Jan</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_month_0_1" class="ajax__calendar_month"><br>Feb</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_month_0_2" class="ajax__calendar_month"><br>Mar</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_month_0_3" class="ajax__calendar_month"><br>Apr</div></td></tr><tr><td><div id="MainContentPlaceHolder_cetxtFromDate_month_1_0" class="ajax__calendar_month"><br>May</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_month_1_1" class="ajax__calendar_month"><br>Jun</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_month_1_2" class="ajax__calendar_month"><br>Jul</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_month_1_3" class="ajax__calendar_month"><br>Aug</div></td></tr><tr><td><div id="MainContentPlaceHolder_cetxtFromDate_month_2_0" class="ajax__calendar_month"><br>Sep</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_month_2_1" class="ajax__calendar_month"><br>Oct</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_month_2_2" class="ajax__calendar_month"><br>Nov</div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_month_2_3" class="ajax__calendar_month"><br>Dec</div></td></tr></tbody></table></div><div id="MainContentPlaceHolder_cetxtFromDate_years" class="ajax__calendar_years" style="display: none; visibility: hidden;"><table id="MainContentPlaceHolder_cetxtFromDate_yearsTable" cellpadding="0" cellspacing="0" border="0" style="margin: auto;"><tbody id="MainContentPlaceHolder_cetxtFromDate_yearsBody"><tr><td><div id="MainContentPlaceHolder_cetxtFromDate_year_0_0" class="ajax__calendar_year"></div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_year_0_1" class="ajax__calendar_year"></div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_year_0_2" class="ajax__calendar_year"></div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_year_0_3" class="ajax__calendar_year"></div></td></tr><tr><td><div id="MainContentPlaceHolder_cetxtFromDate_year_1_0" class="ajax__calendar_year"></div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_year_1_1" class="ajax__calendar_year"></div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_year_1_2" class="ajax__calendar_year"></div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_year_1_3" class="ajax__calendar_year"></div></td></tr><tr><td><div id="MainContentPlaceHolder_cetxtFromDate_year_2_0" class="ajax__calendar_year"></div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_year_2_1" class="ajax__calendar_year"></div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_year_2_2" class="ajax__calendar_year"></div></td><td><div id="MainContentPlaceHolder_cetxtFromDate_year_2_3" class="ajax__calendar_year"></div></td></tr></tbody></table></div></div><div><div id="MainContentPlaceHolder_cetxtFromDate_today" class="ajax__calendar_footer ajax__calendar_today">Today: June 4, 2026</div></div></div></div></div>
+                                                <div class="col-sm-2 form-group">
+                                                    <label>To Date:<span class="err">*</span></label>
+                                                    <input name="ctl00$MainContentPlaceHolder$txtToDate" type="text" value="01/02/2026" onchange="javascript:setTimeout('__doPostBack(\'ctl00$MainContentPlaceHolder$txtToDate\',\'\')', 0)" onkeypress="if (WebForm_TextBoxKeyHandler(event) == false) return false;" id="MainContentPlaceHolder_txtToDate" class="form-control" autocomplete="off" onkeyup="return valid1(event)" onblur="return valid1(event)" readonly="readonly">
+                                                    
+                                                </div>
+                                                <div class="col-sm-2 form-group">
+                                                    <div class="col-sm-4 form-group" style="padding: 20px 0px 0px 0px">
+
+                                                        <input type="submit" name="ctl00$MainContentPlaceHolder$btnShow" value="Show" onclick="javascript:WebForm_DoPostBackWithOptions(new WebForm_PostBackOptions(&quot;ctl00$MainContentPlaceHolder$btnShow&quot;, &quot;&quot;, true, &quot;&quot;, &quot;&quot;, false, false))" id="MainContentPlaceHolder_btnShow" class="btn btn-success">
+
+                                                    </div>
+
+                                                    <div class="col-sm-4 form-group" style="padding: 24px 0px 0px 25px">
+                                                        <div id="MainContentPlaceHolder_UpdateProgress1" style="display:none;" role="status" aria-hidden="true">
+		
+                                                                <img id="MainContentPlaceHolder_Image2" src="Images/load.gif" style="height:25px;width:28px;">
+                                                            
+	</div>
+                                                    </div>
+
+                                                    <div class="form-group" style="padding: 26px 0px 0px 0px">
+                                                        <input type="image" name="ctl00$MainContentPlaceHolder$btnExcel1" id="MainContentPlaceHolder_btnExcel1" title="Export to Excel format." src="Images/excel.jpg">
+                                                        
+
+                                                    </div>
+
+                                                </div>
+                                            </div>
+
+                                            <div class="col-md-2 pull-right form-group">
+                                                
+                                                
+                                            </div>
+
+                                            <div class="GridView">
+                                                <div>
+		<table class="roundconner" cellspacing="1" cellpadding="1" rules="all" border="1" id="MainContentPlaceHolder_grdView" style="color:#333333;background-color:#55A7D1;font-size:Small;width:100%;">
+			<tbody><tr style="color:White;background-color:#55A7D1;font-weight:bold;">
+				<th scope="col">&nbsp;</th><th scope="col">Client Name</th><th scope="col">Toll Plaza Location</th><th scope="col">Toll ID</th><th scope="col">Settlement Date</th><th scope="col">Transaction Count</th><th scope="col">Transaction Amount</th><th scope="col">NPCI Settlement Amount</th><th scope="col">PayOut Amount</th><th scope="col">Credit Adjustment Count</th><th scope="col">Credit Adjustment Amount</th><th scope="col">Debit Adjustment Count</th><th scope="col">Debit Adjustment Amount</th><th scope="col">Chargeback Count</th><th scope="col">Chargeback Amount</th>
+			</tr><tr class="GvGrid" align="center" style="background-color:#EFF3FB;">
+				<td>
+                                                                <asp:templatefield headertext="Settlement Date" visible="true" fromat="">
+                                                                    
+                                                                    <img alt="" style="cursor: pointer" src="images/plus.png">
+                                                                    
+                                                                    
+                                                                    <div id="MainContentPlaceHolder_grdView_pnlOrders_0" style="display: none">
+					
+                                                                        <div>
+						<table class="ChildGrid" cellspacing="0" rules="all" border="1" id="MainContentPlaceHolder_grdView_gvSub_0" style="border-collapse:collapse;">
+							<tbody><tr>
+								<th scope="col">Toll ID</th><th scope="col">Settlement Date</th><th scope="col">Toll Plaza Location</th><th scope="col">Transaction Date</th><th scope="col">Transaction Count</th><th scope="col">Toll Amount</th><th scope="col">Credit Adjustment Count</th><th scope="col">Credit Adjustment Amount</th><th scope="col">Debit Adjustment Count</th><th scope="col">Debit Adjustment Amount</th><th scope="col">Chargeback Count</th><th scope="col">Chargeback Amount</th>
+							</tr><tr>
+								<td style="width:150px;">378012</td><td style="width:150px;">01/02/2026</td><td style="width:150px;">GALIA TOLL Plaza</td><td style="width:150px;">31/01/2026</td><td style="color:Blue;width:150px;"><a href="RevenueReportRRNWise.aspx?SettlementDate=01/02/2026&amp;TransactionDate=31/01/2026&amp;TollID=378012" target="_blank">7955</a></td><td style="width:150px;">936905.00</td><td style="width:150px;">0</td><td style="width:150px;">0.00</td><td style="width:150px;">0</td><td style="width:150px;">0.00</td><td style="color:Blue;width:150px;"><a href="RevenueDisputetxndate.aspx?SettlementDate=01/02/2026&amp;TollID=378012" target="_blank">0</a></td><td style="width:150px;">0.00</td>
+							</tr><tr>
+								<td style="width:150px;">378012</td><td style="width:150px;">01/02/2026</td><td style="width:150px;">GALIA TOLL Plaza</td><td style="width:150px;">01/02/2026</td><td style="color:Blue;width:150px;"><a href="RevenueReportRRNWise.aspx?SettlementDate=01/02/2026&amp;TransactionDate=01/02/2026&amp;TollID=378012" target="_blank">2265</a></td><td style="width:150px;">359635.00</td><td style="width:150px;">0</td><td style="width:150px;">0.00</td><td style="width:150px;">0</td><td style="width:150px;">0.00</td><td style="color:Blue;width:150px;"><a href="RevenueDisputetxndate.aspx?SettlementDate=01/02/2026&amp;TollID=378012" target="_blank">0</a></td><td style="width:150px;">0.00</td>
+							</tr>
+						</tbody></table>
+					</div>
+                                                                    
+				</div>
+                                                            </asp:templatefield></td><td>
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_clientname_0">Galia</span>
+                                                            </td><td>
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_plazalocation_0">GALIA TOLL Plaza</span>
+                                                            </td><td>
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_tollId_0">378012</span>
+                                                            </td><td>
+                                                                
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_settlementdate_0">01/Feb/2026</span>
+                                                            </td><td>
+                                                                
+                                                                <a id="MainContentPlaceHolder_grdView_lbl_txncnt_0" href="RevenueRRNStldatewise.aspx?ClientName=Galia&amp;SettlementDate=01/Feb/2026" target="_blank" style="text-align: right; color: #0000FF; cursor: pointer; text-decoration: underline;">10220</a>
+                                                            </td><td>
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_tollamt_0">1296540.00</span>
+                                                            </td><td>
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_stlamt_0">1296540.00</span>
+                                                            </td><td>
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_netamt_0">1296540.00</span>
+                                                            </td><td>
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_crdadjct_0">0</span>
+                                                            </td><td>
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_crdadjamt_0">0.00</span>
+                                                            </td><td>
+                                                                
+                                                                <a id="MainContentPlaceHolder_grdView_lbl_dbtadjcnt_0" href="DbtAdjRVRRNWiseReport.aspx?ClientName=Galia&amp;SettlementDate=01/Feb/2026" target="_blank" style="text-align: right; color: #0000FF; cursor: pointer; text-decoration: underline;">0</a>
+                                                            </td><td>
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_dbtadjamt_0">0.00</span>
+                                                            </td><td>
+                                                                
+                                                                <a id="MainContentPlaceHolder_grdView_lbl_cbkcnt_0" href="DisputeRRNWiseReport.aspx?ClientName=Galia&amp;SettlementDate=01/Feb/2026" target="_blank" style="text-align: right; color: #0000FF; cursor: pointer; text-decoration: underline;">0</a>
+                                                            </td><td>
+                                                                <span id="MainContentPlaceHolder_grdView_lbl_cbkamt_0">0.00</span>
+                                                            </td>
+			</tr>
+		</tbody></table>
+	</div>
+                                            </div>
+
+                                            <div id="submitted"></div>
+
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        
+</div>
+
+
+        </div>
+        <div class="clr"></div>
+        <div class="footer">
+            <p>
+                © 2026. 
+             <a href="http://www.maximusinfoware.in/" target="_blank">Maximus Infoware (India) Pvt.  Ltd. </a>
+                All Rights Reserved.
+            </p>
+        </div>
+
+        
+        <script type="text/javascript">
+            /*global $ */
+            $(document).ready(function () {
+                "use strict";
+                $('.menu > ul > li:has( > ul)').addClass('menu-dropdown-icon');
+                //Checks if li has sub (ul) and adds class for toggle icon - just an UI
+
+                $('.menu > ul > li > ul:not(:has(ul))').addClass('normal-sub');
+
+                $(".menu > ul > li").hover(function (e) {
+                    if ($(window).width() > 943) {
+                        $(this).children("ul").stop(true, false).fadeToggle(150);
+                        e.preventDefault();
+                    }
+                });
+                //If width is more than 943px dropdowns are displayed on hover    
+                $(".menu > ul > li").click(function () {
+                    if ($(window).width() <= 943) {
+                        $(this).children("ul").fadeToggle(150);
+                    }
+                });
+                //If width is less or equal to 943px dropdowns are displayed on click (thanks Aman Jain from stackoverflow)
+
+                $(".h-bars").click(function (e) {
+                    $(".menu > ul").toggleClass('show-on-mobile');
+                    e.preventDefault();
+                });
+                //when clicked on mobile-menu, normal menu is shown as a list, classic rwd menu story (thanks mwl from stackoverflow)
+
+            });
+        </script>
+
+
+        
+    
+<script type="text/javascript">
+//<![CDATA[
+var Page_Validators =  new Array(document.getElementById("MainContentPlaceHolder_ReqddlClient"));
+//]]>
+</script>
+
+<script type="text/javascript">
+//<![CDATA[
+var MainContentPlaceHolder_ReqddlClient = document.all ? document.all["MainContentPlaceHolder_ReqddlClient"] : document.getElementById("MainContentPlaceHolder_ReqddlClient");
+MainContentPlaceHolder_ReqddlClient.controltovalidate = "MainContentPlaceHolder_ddlClient";
+MainContentPlaceHolder_ReqddlClient.errormessage = "Required";
+MainContentPlaceHolder_ReqddlClient.evaluationfunction = "RequiredFieldValidatorEvaluateIsValid";
+MainContentPlaceHolder_ReqddlClient.initialvalue = "0";
+//]]>
+</script>
+
+
+<script type="text/javascript">
+//<![CDATA[
+(function() {var fn = function() {$get("MainContentPlaceHolder_ToolkitScriptManager1_HiddenField").value = '';Sys.Application.remove_init(fn);};Sys.Application.add_init(fn);})();
+var Page_ValidationActive = false;
+if (typeof(ValidatorOnLoad) == "function") {
+    ValidatorOnLoad();
+}
+
+function ValidatorOnSubmit() {
+    if (Page_ValidationActive) {
+        return ValidatorCommonOnSubmit();
+    }
+    else {
+        return true;
+    }
+}
+        
+document.getElementById('MainContentPlaceHolder_ReqddlClient').dispose = function() {
+    Array.remove(Page_Validators, document.getElementById('MainContentPlaceHolder_ReqddlClient'));
+}
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.CalendarBehavior, {"button":$get("MainContentPlaceHolder_txtFromDate"),"format":"dd/MM/yyyy","id":"MainContentPlaceHolder_cetxtFromDate"}, null, null, $get("MainContentPlaceHolder_txtFromDate"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.Extended.UI.CalendarBehavior, {"button":$get("MainContentPlaceHolder_txtToDate"),"format":"dd/MM/yyyy","id":"MainContentPlaceHolder_cetxtToDate"}, null, null, $get("MainContentPlaceHolder_txtToDate"));
+});
+Sys.Application.add_init(function() {
+    $create(Sys.UI._UpdateProgress, {"associatedUpdatePanelId":"MainContentPlaceHolder_Main","displayAfter":500,"dynamicLayout":true}, null, null, $get("MainContentPlaceHolder_UpdateProgress1"));
+});
+//]]>
+</script>
+</form>
+
+
+
+</body></html>

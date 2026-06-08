@@ -1,0 +1,11 @@
+# Ignore archive files
+*.zip
+*.rar
+
+# Ignore spreadsheet and CSV files
+*.xls
+*.xlsx
+*.csv
+
+# Ignore local environment files
+.env
