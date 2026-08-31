@@ -33,6 +33,7 @@ from selenium.webdriver.support.ui import Select
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
+from db_config import get_process_date_range_strings
 
 LOGIN_URL = "https://netcybl.maximusinfoware.in/frmLogin.aspx"
 REFERENCE_EXCEL = "YES_Reference_file.xlsx"
@@ -43,8 +44,7 @@ POST_LOGIN_WAIT_SECONDS = 8
 MAX_INTERVAL_ATTEMPTS = 5
 MAX_CALENDAR_SELECT_ATTEMPTS = 5
 POLL_SECONDS = 2
-DATE_RANGE_START = "2025-11-01"  # YYYY-MM-DD
-DATE_RANGE_END = "2026-05-31"    # YYYY-MM-DD
+# Date range comes from PROCESS_FROM_DATE / PROCESS_TO_DATE in project-root .env
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 
@@ -419,7 +419,7 @@ def wait_for_new_download(
     previous_snapshot: dict[str, float],
     downloads_folder: str = DOWNLOADS_FOLDER,
     timeout_seconds: int = MAX_DOWNLOAD_WAIT_SECONDS,
-) -> Path:
+     ) -> Path:
     """Wait for a newly completed download file to appear in Downloads."""
     folder = Path(downloads_folder)
     if not folder.exists():
@@ -624,7 +624,7 @@ def assert_date_state_matches(
     stage: str,
     *,
     verify_to: bool = True,
-) -> None:
+     ) -> None:
     """Raise when input or calendar behavior dates do not match expectations."""
     from_input = state.get("fromInput", "")
     to_input = state.get("toInput", "")
@@ -694,7 +694,7 @@ def set_calendar_behavior_date(
     input_id: str,
     behavior_id: str,
     target_dt: datetime,
-) -> bool:
+     ) -> bool:
     """Set a date through CalendarBehavior APIs and the bound textbox."""
     target_value = format_dd_mm_yyyy(target_dt)
     return bool(
@@ -1469,10 +1469,13 @@ def export_debit_adjustment_reports_for_current_interval(driver, plaza_name: str
 def process_reference_file(
     excel_file_path: str = REFERENCE_EXCEL,
     headless: bool = False,
-    date_range_start: str = DATE_RANGE_START,
-    date_range_end: str = DATE_RANGE_END,
+    date_range_start: str | None = None,
+    date_range_end: str | None = None,
      ) -> bool:
     """Read pending rows from Excel and attempt YES Bank login for each."""
+    if date_range_start is None or date_range_end is None:
+        date_range_start, date_range_end = get_process_date_range_strings()
+
     reference_path = SCRIPT_DIR / excel_file_path
     if not reference_path.exists():
         print(f"Reference file not found: {reference_path}")
@@ -1622,11 +1625,18 @@ def process_reference_file(
 
 
 def main():
+    try:
+        date_range_start, date_range_end = get_process_date_range_strings()
+    except (RuntimeError, ValueError) as exc:
+        print(f"\nError: {exc}")
+        return
+
+    print(f"Using process date range from .env: {date_range_start} to {date_range_end}")
     process_reference_file(
         excel_file_path=REFERENCE_EXCEL,
         headless=False,
-        date_range_start=DATE_RANGE_START,
-        date_range_end=DATE_RANGE_END,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
     )
 
 

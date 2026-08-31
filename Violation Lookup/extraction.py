@@ -338,7 +338,7 @@ def process_excel_file(input_file_path, output_file_path=None):
     
     Args:
         input_file_path: Path to input Excel file
-        output_file_path: Path to output Excel file (optional, defaults to input_file_name_processed.xlsx)
+        output_file_path: Path to output Excel file (optional; file is written only when provided)
     """
     if not os.path.exists(input_file_path):
         print(f"Error: File '{input_file_path}' not found.")
@@ -436,17 +436,19 @@ def process_excel_file(input_file_path, output_file_path=None):
 
         # print(f"Date extracted for row {idx}: {date_str}")
         
-        # Convert Violation amt to numeric, handle errors
+        # Convert Violation amt to native Python float (avoid np.float64 in DB binds)
         # If violation_amt is empty, treat it as 0
         try:
             if pd.isna(violation_amt) or str(violation_amt).strip() == '':
-                amount = 0  # Treat empty violation_amt as 0
+                amount = 0.0
             else:
                 amount = pd.to_numeric(violation_amt, errors='coerce')
             if pd.isna(amount):
-                    amount = 0  # Treat invalid amounts as 0
+                amount = 0.0
+            else:
+                amount = float(amount)
         except Exception:
-            amount = 0  # Treat any errors as 0
+            amount = 0.0
         
         # Add to date-wise totals (even if amount is 0, we still record the date)
         if date_str in date_totals:
@@ -458,50 +460,43 @@ def process_excel_file(input_file_path, output_file_path=None):
     if not date_totals:
         print("No valid data found to process.")
         return None
-    
-    # Create output DataFrame with date format conversion (YYYY-MM-DD to DD-MM-YYYY)
-    output_data = []
-    for date in sorted(date_totals.keys()):
-        # Convert date from YYYY-MM-DD to DD-MM-YYYY
+
+    print(f"\nProcessing complete!")
+    print(f"Total dates processed: {len(date_totals)}")
+    print_date_wise_violation_totals(date_totals, input_file_path)
+
+    if output_file_path:
+        output_data = []
+        for date in sorted(date_totals.keys()):
+            try:
+                date_obj = datetime.strptime(date, '%Y-%m-%d')
+                formatted_date = date_obj.strftime('%d-%m-%Y')
+            except Exception:
+                formatted_date = date
+
+            output_data.append({
+                'Date': formatted_date,
+                'Total Violation amt': date_totals[date]
+            })
+
+        output_df = pd.DataFrame(output_data)
         try:
-            date_obj = datetime.strptime(date, '%Y-%m-%d')
-            formatted_date = date_obj.strftime('%d-%m-%Y')
-        except:
-            # If parsing fails, use original date
-            formatted_date = date
-        
-        output_data.append({
-            'Date': formatted_date,
-            'Total Violation amt': date_totals[date]
-        })
-    
-    output_df = pd.DataFrame(output_data)
-    
-    # Generate output file path if not provided
-    if output_file_path is None:
-        base_name = os.path.splitext(input_file_path)[0]
-        output_file_path = f"{base_name}_processed.xlsx"
-    
-    # Write to Excel file
-    try:
-        output_df.to_excel(output_file_path, index=False)
-        print(f"\nProcessing complete!")
-        print(f"Total dates processed: {len(date_totals)}")
-        print(f"Output saved to: {output_file_path}")
-        print_date_wise_violation_totals(date_totals, input_file_path)
-        return date_totals  # Return date_totals dictionary
-    except Exception as e:
-        print(f"Error writing output file: {e}")
-        return None
+            output_df.to_excel(output_file_path, index=False)
+            print(f"Output saved to: {output_file_path}")
+        except Exception as e:
+            print(f"Error writing output file: {e}")
+            return None
+
+    return date_totals
 
 
 def process_folder_excel_files(folder_path, output_file_path=None):
     """
-    Process all Excel/CSV files in a folder and generate a single combined output file.
+    Process all Excel/CSV files in a folder and return combined date-wise totals.
     
     Args:
         folder_path: Path to folder containing Excel/CSV files
-        output_file_path: Path to output Excel file (optional, defaults to folder_name_combined_processed.xlsx)
+        output_file_path: Path to output Excel file (optional; file is written only when provided)
     
     Returns:
         dict: Combined date_totals dictionary with all dates and their totals, or None if error
@@ -569,41 +564,33 @@ def process_folder_excel_files(folder_path, output_file_path=None):
     print(f"  Failed: {failed_count}")
     print(f"  Total unique dates: {len(combined_date_totals)}")
     print("=" * 60)
-    
-    # Generate output file path if not provided
-    if output_file_path is None:
-        folder_name = os.path.basename(os.path.normpath(folder_path))
-        output_file_path = os.path.join(folder_path, f"{folder_name}_combined_processed.xlsx")
-    
-    # Create output DataFrame with date format conversion (YYYY-MM-DD to DD-MM-YYYY)
-    output_data = []
-    for date in sorted(combined_date_totals.keys()):
-        # Convert date from YYYY-MM-DD to DD-MM-YYYY
+
+    if output_file_path:
+        output_data = []
+        for date in sorted(combined_date_totals.keys()):
+            try:
+                date_obj = datetime.strptime(date, '%Y-%m-%d')
+                formatted_date = date_obj.strftime('%d-%m-%Y')
+            except Exception:
+                formatted_date = date
+
+            output_data.append({
+                'Date': formatted_date,
+                'Total Violation amt': combined_date_totals[date]
+            })
+
+        output_df = pd.DataFrame(output_data)
         try:
-            date_obj = datetime.strptime(date, '%Y-%m-%d')
-            formatted_date = date_obj.strftime('%d-%m-%Y')
-        except:
-            # If parsing fails, use original date
-            formatted_date = date
-        
-        output_data.append({
-            'Date': formatted_date,
-            'Total Violation amt': combined_date_totals[date]
-        })
-    
-    output_df = pd.DataFrame(output_data)
-    
-    # Write to Excel file
-    try:
-        output_df.to_excel(output_file_path, index=False)
-        print(f"\n✓ Combined output saved to: {output_file_path}")
-        print(f"  Total dates in output: {len(combined_date_totals)}")
-        return combined_date_totals
-    except Exception as e:
-        print(f"Error writing combined output file: {e}")
-        import traceback
-        traceback.print_exc()
-        return None
+            output_df.to_excel(output_file_path, index=False)
+            print(f"\n✓ Combined output saved to: {output_file_path}")
+            print(f"  Total dates in output: {len(combined_date_totals)}")
+        except Exception as e:
+            print(f"Error writing combined output file: {e}")
+            import traceback
+            traceback.print_exc()
+            return None
+
+    return combined_date_totals
 
 
 def get_db_connection():
@@ -645,6 +632,14 @@ def update_violation_amt_in_db(plaza_name, date_totals):
         cursor = conn.cursor()
         
         for date_str, violation_amount in date_totals.items():
+            # Cast numpy/pandas scalars to native float so psycopg2 binds correctly
+            try:
+                violation_amount = float(violation_amount)
+            except (TypeError, ValueError):
+                print(f"  Skipping {plaza_name} - {date_str}: invalid violation amount {violation_amount!r}")
+                stats['skipped'] += 1
+                continue
+
             # Skip if violation amount is 0 or negative
             if violation_amount <= 0:
                 continue
@@ -1086,7 +1081,6 @@ def process_plazas_from_reference_excel(excel_file_path, from_date, to_date, bas
                 fail_count += 1
                 continue
             folder_path = os.path.join(base_folder, plaza_name_idfc)
-            output_file = os.path.join(folder_path, "combined_output.xlsx")
 
             print("\n" + "=" * 80)
             print(f"Processing row {idx + 2}")
@@ -1110,14 +1104,15 @@ def process_plazas_from_reference_excel(excel_file_path, from_date, to_date, bas
                 continue
 
             # Step 2: process extracted files
-            combined_totals = process_folder_excel_files(folder_path, output_file)
+            combined_totals = process_folder_excel_files(folder_path)
             if combined_totals is None:
                 print(f"Failed processing folder for row {idx + 2}. Skipping.")
                 fail_count += 1
                 continue
 
-            # Step 3: update DB
-            stats = read_processed_excel_and_update_db(output_file, plaza_name_db)
+            # Step 3: update DB directly from in-memory totals
+            print(f"\nUpdating database for plaza: {plaza_name_db}")
+            stats = update_violation_amt_in_db(plaza_name_db, combined_totals)
             if not isinstance(stats, dict):
                 print(f"Failed DB update step for row {idx + 2}. Skipping.")
                 fail_count += 1
@@ -1162,8 +1157,8 @@ def main():
 
     # Hardcoded date range (Excel Date column is intentionally ignored)
     # from_date = "2025-11-11"
-    from_date = "2026-04-20"
-    to_date = "2026-05-30"
+    from_date = "2026-07-07"
+    to_date = "2026-08-09"
 
     # Reference file (same file used by IDFC flow)
     excel_file_path = "Reference_File.xlsx"
@@ -1172,8 +1167,8 @@ def main():
         excel_file_path=excel_file_path,
         from_date=from_date,
         to_date=to_date,
+        base_folder="IDFC_Life_cycle_files_from_July07_to_August09"
         # base_folder="ICICI Bank Files"
-        base_folder="ICICI Bank Files"
     )
 
     if success:

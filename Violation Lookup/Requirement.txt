@@ -1,2 +1,0 @@
-Run IDFC bot for approved violations. 
-And run it for madai again.

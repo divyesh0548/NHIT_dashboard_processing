@@ -1,0 +1,24 @@
+1. plaza_name
+2. hour
+3. date
+4. vehicle_classes
+5. lane_no
+6. mop
+
+
+
+
+vehicle_classes 
+1. 3WHEELER
+2. BUS-2-AXLE
+3. CAR/JEEP
+4. LCV
+5. TRACTOR
+6. TRUCK 4-6 AXLE
+7. TRUCK-2-AXLE
+8. TRUCK-3-AXLE
+
+
+
+lane_no
+L01, L02,....L12

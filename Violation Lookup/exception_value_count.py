@@ -1,6 +1,7 @@
 import pandas as pd
 import psycopg2
-from plaza_rates import PLAZA_RATES
+from datetime import date, datetime
+from plaza_rates import PLAZA_RATES, Plaza_Rates_Apr26_onwards
 from pathlib import Path
 import sys
 
@@ -13,6 +14,7 @@ from db_config import get_db_connection_kwargs
 
 
 JOURNEY_TYPE_COLUMN_CANDIDATES = ["Journey Type", "Trip Type"]
+APR26_RATES_CUTOFF_DATE = date(2026, 4, 1)
 
 
 def find_first_matching_column(df: pd.DataFrame, column_candidates):
@@ -27,6 +29,70 @@ def find_first_matching_column(df: pd.DataFrame, column_candidates):
                 return col
 
     return None
+
+
+def normalize_row_date(date_value) -> date | None:
+    """Parse a row date value into a date object (expects YYYY-MM-DD when string)."""
+    if pd.isna(date_value):
+        return None
+
+    if isinstance(date_value, (datetime, pd.Timestamp)):
+        return date_value.date()
+
+    date_str = str(date_value).strip()
+    if not date_str:
+        return None
+
+    for fmt in ("%Y-%m-%d", "%Y-%m-%d %H:%M:%S", "%d/%m/%Y", "%d-%m-%Y"):
+        try:
+            return datetime.strptime(date_str, fmt).date()
+        except ValueError:
+            continue
+
+    parsed = pd.to_datetime(date_str, errors="coerce")
+    if pd.isna(parsed):
+        return None
+    return parsed.date()
+
+
+def get_rates_for_plaza_and_date(plaza_name: str, date_value) -> tuple[dict | None, str]:
+    """
+    Select plaza rates based on row date.
+
+    - date >= 2026-04-01: use Plaza_Rates_Apr26_onwards when available
+    - date < 2026-04-01: use PLAZA_RATES (default)
+    - if plaza is missing from Plaza_Rates_Apr26_onwards, fall back to PLAZA_RATES
+    """
+    row_date = normalize_row_date(date_value)
+    if row_date is None:
+        if plaza_name in PLAZA_RATES:
+            return PLAZA_RATES[plaza_name], "PLAZA_RATES (default; invalid/missing date)"
+        return None, "no rates (invalid/missing date and plaza not in PLAZA_RATES)"
+
+    date_label = row_date.strftime("%Y-%m-%d")
+    use_apr26_rates = row_date >= APR26_RATES_CUTOFF_DATE
+
+    if use_apr26_rates and plaza_name in Plaza_Rates_Apr26_onwards:
+        return (
+            Plaza_Rates_Apr26_onwards[plaza_name],
+            f"Plaza_Rates_Apr26_onwards (date {date_label} >= 2026-04-01)",
+        )
+
+    if plaza_name in PLAZA_RATES:
+        if use_apr26_rates:
+            return (
+                PLAZA_RATES[plaza_name],
+                (
+                    f"PLAZA_RATES (default fallback; '{plaza_name}' not found in "
+                    f"Plaza_Rates_Apr26_onwards, date {date_label} >= 2026-04-01)"
+                ),
+            )
+        return (
+            PLAZA_RATES[plaza_name],
+            f"PLAZA_RATES (default; date {date_label} < 2026-04-01)",
+        )
+
+    return None, f"no rates (plaza '{plaza_name}' not found in PLAZA_RATES)"
 
 
 def get_rate_section_from_journey_type(journey_type_value) -> str:
@@ -281,16 +347,18 @@ def calculate_exception_values(excel_file_path: str, plaza_name: str):
     print(f"Input File: {excel_file_path}")
     print(f"Plaza Name: {plaza_name}")
 
-    # Validate plaza exists in rates
-    if plaza_name not in PLAZA_RATES:
-        print(f"ERROR: Plaza '{plaza_name}' not found in PLAZA_RATES.")
-        print(f"Available plazas: {', '.join(PLAZA_RATES.keys())}")
+    if plaza_name not in PLAZA_RATES and plaza_name not in Plaza_Rates_Apr26_onwards:
+        print(f"ERROR: Plaza '{plaza_name}' not found in PLAZA_RATES or Plaza_Rates_Apr26_onwards.")
+        print(f"Available default plazas: {', '.join(PLAZA_RATES.keys())}")
+        print(f"Available Apr-2026 plazas: {', '.join(Plaza_Rates_Apr26_onwards.keys())}")
         return
 
-    rates = PLAZA_RATES[plaza_name]
-    print(f"Rates loaded for '{plaza_name}':")
-    for section, values in rates.items():
-        print(f"  {section}: {values}")
+    print("Rate selection policy:")
+    print(f"  - Dates before {APR26_RATES_CUTOFF_DATE.strftime('%Y-%m-%d')}: PLAZA_RATES (default)")
+    print(
+        f"  - Dates on/after {APR26_RATES_CUTOFF_DATE.strftime('%Y-%m-%d')}: "
+        "Plaza_Rates_Apr26_onwards when available, otherwise PLAZA_RATES (default)"
+    )
 
     # Read Excel file
     df = pd.read_excel(excel_file_path, engine='openpyxl')
@@ -298,7 +366,7 @@ def calculate_exception_values(excel_file_path: str, plaza_name: str):
     print(f"\nTotal rows: {total_rows}")
 
     # Validate required columns
-    required_cols = ['Correct_index', 'TC_class_index']
+    required_cols = ['date', 'Correct_index', 'TC_class_index']
     for col in required_cols:
         if col not in df.columns:
             print(f"ERROR: Required column '{col}' not found.")
@@ -317,9 +385,27 @@ def calculate_exception_values(excel_file_path: str, plaza_name: str):
     results = []
     skipped = 0
     error_count = 0
+    rate_source_counts: dict[str, int] = {}
+    logged_rate_sources: set[tuple[str, str]] = set()
 
     for idx, row in df.iterrows():
         try:
+            rates, rate_source = get_rates_for_plaza_and_date(plaza_name, row['date'])
+            if rates is None:
+                print(f"  Row {idx + 1}: {rate_source}. Skipping.")
+                results.append(None)
+                skipped += 1
+                continue
+
+            row_date = normalize_row_date(row['date'])
+            date_label = row_date.strftime("%Y-%m-%d") if row_date else "unknown"
+            rate_source_counts[rate_source] = rate_source_counts.get(rate_source, 0) + 1
+
+            log_key = (date_label, rate_source)
+            if log_key not in logged_rate_sources:
+                print(f"  Rates for date {date_label}: {rate_source}")
+                logged_rate_sources.add(log_key)
+
             # Get index values
             correct_idx = row['Correct_index']
             tc_idx = row['TC_class_index']
@@ -378,6 +464,11 @@ def calculate_exception_values(excel_file_path: str, plaza_name: str):
     print(f"Calculated:       {calculated}")
     print(f"Skipped:          {skipped}")
     print(f"Errors:           {error_count}")
+
+    if rate_source_counts:
+        print("\nRate tables used:")
+        for source, count in sorted(rate_source_counts.items()):
+            print(f"  {source}: {count} row(s)")
 
     # Show some sample results
     non_null_results = df[df['potential_exception_value'].notna()]

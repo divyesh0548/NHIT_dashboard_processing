@@ -46,4 +46,4 @@ After this completes, it marks plaza as done in Reference_File.xlsx
 
 
 ****Important****
-This script must be executed after the previous is completed for same date ranges. Because approved violations are only updated if exception_value exists.
+This script(Approved Violation) must be executed after the previous is completed for same date ranges. Because approved violations are only updated if exception_value exists.

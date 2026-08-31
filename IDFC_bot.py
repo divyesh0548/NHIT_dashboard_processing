@@ -103,7 +103,7 @@ def get_idfc_visible_page_text(driver) -> str:
 def wait_for_idfc_session_slot(
     seconds: int = IDFC_SESSION_RELEASE_WAIT_SECONDS,
     reason: str = "",
-):
+    ):
     """Wait so the portal can drop the previous server-side session."""
     label = f" ({reason})" if reason else ""
     print(

@@ -1,18 +1,3 @@
-Check if new plazas are added in IDFC portal.
-
-Plazas available on IDFC portal but unable to download files.
-Patgaon
-Odhaki 
-Khawasa
-
-
-
-Khawasa : No transections available on ICICI either.
-
-
-
-
-
 
 
 VRN file:

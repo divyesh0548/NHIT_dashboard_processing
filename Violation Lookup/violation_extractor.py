@@ -594,7 +594,7 @@ if __name__ == "__main__":
     # List of entity names to process
     entity_names = [
         # "aroli",
-        "bassi",
+        # "bassi",
         # "dhaneshwar",
         # "hattargi",
         # "khemana",
@@ -623,14 +623,14 @@ if __name__ == "__main__":
         # "bhojpuree",
         # "chhapar",
         # "dukkavanipalem",
-        # "madapam",
+        # # "madapam",
         # "mahasamudram",
-        # "maigalganj",
+        # # "maigalganj",
         # "mudhipar",
         # "tarapongi",
         # "veeravalli",
-        # "faridpur",
-        # "gadanki",
+        # # "faridpur",
+        "gadanki",
         # "marripalem",
         # "nathavalasa",
     ]
@@ -641,7 +641,7 @@ if __name__ == "__main__":
     # ============================================================================
     # OPTION 1: Use a date range (uncomment these three lines and comment out OPTION 2)
     from_date = "2025-11-23"
-    to_date = "2026-02-15"
+    to_date = "2026-05-25"
     specific_dates = None
     
     # OPTION 2: Use specific dates only (uncomment this line and comment out OPTION 1)

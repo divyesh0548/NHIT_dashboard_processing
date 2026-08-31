@@ -1,0 +1,4 @@
+
+
+Manual Violaion --> Value from Life cycle report
+Potential Violation (Exception) --> Calculated based on given rates for each vehicle class

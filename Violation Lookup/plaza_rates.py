@@ -4,8 +4,8 @@
 
 # List of plazas where rates are applied as mudhipar = bahadrabad, dukkavanipalem, hattargi, kelapur, kognoli, mahasamudram, maigalganj
 PLAZA_RATES = {
-    'aroli': {
-        'single': {
+    "aroli": {
+        "single": {
             1: 85,
             2: 135,
             3: 280,
@@ -13,7 +13,7 @@ PLAZA_RATES = {
             5: 440,
             6: 540,
         },
-        'return': {
+        "return": {
             1: 40,
             2: 65,
             3: 145,
@@ -21,7 +21,7 @@ PLAZA_RATES = {
             5: 225,
             6: 270,
         },
-        'local': {
+        "local": {
             1: 40,
             2: 65,
             3: 145,
@@ -30,8 +30,8 @@ PLAZA_RATES = {
             6: 270,
         },
     },
-    'boharipar': {
-        'single': {
+    "boharipar": {
+        "single": {
             1: 165,
             2: 265,
             3: 555,
@@ -39,7 +39,7 @@ PLAZA_RATES = {
             5: 865,
             6: 1055,
         },
-        'return': {
+        "return": {
             1: 80,
             2: 130,
             3: 275,
@@ -47,7 +47,7 @@ PLAZA_RATES = {
             5: 435,
             6: 530,
         },
-        'local': {
+        "local": {
             1: 80,
             2: 130,
             3: 275,
@@ -56,8 +56,8 @@ PLAZA_RATES = {
             6: 530,
         },
     },
-    'balibhasa': {
-        'single': {
+    "balibhasa": {
+        "single": {
             1: 95,
             2: 150,
             3: 315,
@@ -65,7 +65,7 @@ PLAZA_RATES = {
             5: 495,
             6: 605,
         },
-        'return': {
+        "return": {
             1: 45,
             2: 75,
             3: 160,
@@ -73,7 +73,7 @@ PLAZA_RATES = {
             5: 250,
             6: 300,
         },
-        'local': {
+        "local": {
             1: 45,
             2: 75,
             3: 160,
@@ -82,8 +82,8 @@ PLAZA_RATES = {
             6: 300,
         },
     },
-    'bankapur': {
-        'single': {
+    "bankapur": {
+        "single": {
             1: 105,
             2: 165,
             3: 350,
@@ -91,7 +91,7 @@ PLAZA_RATES = {
             5: 545,
             6: 665,
         },
-        'return': {
+        "return": {
             1: 50,
             2: 85,
             3: 170,
@@ -99,7 +99,7 @@ PLAZA_RATES = {
             5: 275,
             6: 330,
         },
-        'local': {
+        "local": {
             1: 50,
             2: 85,
             3: 175,
@@ -108,8 +108,8 @@ PLAZA_RATES = {
             6: 330,
         },
     },
-    'bassi': {
-        'single': {
+    "bassi": {
+        "single": {
             1: 95,
             2: 155,
             3: 330,
@@ -117,7 +117,7 @@ PLAZA_RATES = {
             5: 515,
             6: 630,
         },
-        'return': {
+        "return": {
             1: 50,
             2: 80,
             3: 165,
@@ -125,7 +125,7 @@ PLAZA_RATES = {
             5: 260,
             6: 315,
         },
-        'local': {
+        "local": {
             1: 50,
             2: 80,
             3: 165,
@@ -134,8 +134,8 @@ PLAZA_RATES = {
             6: 315,
         },
     },
-    'bhojpuree': {
-        'single': {
+    "bhojpuree": {
+        "single": {
             1: 105,
             2: 165,
             3: 350,
@@ -143,7 +143,7 @@ PLAZA_RATES = {
             5: 545,
             6: 665,
         },
-        'return': {
+        "return": {
             1: 105,
             2: 165,
             3: 350,
@@ -151,7 +151,7 @@ PLAZA_RATES = {
             5: 545,
             6: 665,
         },
-        'local': {
+        "local": {
             1: 105,
             2: 165,
             3: 350,
@@ -160,8 +160,8 @@ PLAZA_RATES = {
             6: 665,
         },
     },
-    'chalageri': {
-        'single': {
+    "chalageri": {
+        "single": {
             1: 145,
             2: 235,
             3: 495,
@@ -169,7 +169,7 @@ PLAZA_RATES = {
             5: 780,
             6: 950,
         },
-        'return': {
+        "return": {
             1: 75,
             2: 120,
             3: 250,
@@ -177,7 +177,7 @@ PLAZA_RATES = {
             5: 390,
             6: 470,
         },
-        'local': {
+        "local": {
             1: 75,
             2: 120,
             3: 250,
@@ -186,8 +186,8 @@ PLAZA_RATES = {
             6: 470,
         },
     },
-    'chhapar': {
-        'single': {
+    "chhapar": {
+        "single": {
             1: 60,
             2: 100,
             3: 210,
@@ -195,7 +195,7 @@ PLAZA_RATES = {
             5: 325,
             6: 400,
         },
-        'return': {
+        "return": {
             1: 60,
             2: 100,
             3: 210,
@@ -203,7 +203,7 @@ PLAZA_RATES = {
             5: 325,
             6: 400,
         },
-        'local': {
+        "local": {
             1: 60,
             2: 100,
             3: 210,
@@ -212,8 +212,8 @@ PLAZA_RATES = {
             6: 400,
         },
     },
-    'dahalapara': {
-        'single': {
+    "dahalapara": {
+        "single": {
             1: 95,
             2: 150,
             3: 315,
@@ -221,7 +221,7 @@ PLAZA_RATES = {
             5: 500,
             6: 605,
         },
-        'return': {
+        "return": {
             1: 45,
             2: 75,
             3: 160,
@@ -229,7 +229,7 @@ PLAZA_RATES = {
             5: 245,
             6: 305,
         },
-        'local': {
+        "local": {
             1: 45,
             2: 75,
             3: 160,
@@ -238,8 +238,8 @@ PLAZA_RATES = {
             6: 305,
         },
     },
-    'daroda': {
-        'single': {
+    "daroda": {
+        "single": {
             1: 115,
             2: 190,
             3: 395,
@@ -247,7 +247,7 @@ PLAZA_RATES = {
             5: 625,
             6: 760,
         },
-        'return': {
+        "return": {
             1: 60,
             2: 95,
             3: 200,
@@ -255,7 +255,7 @@ PLAZA_RATES = {
             5: 310,
             6: 380,
         },
-        'local': {
+        "local": {
             1: 60,
             2: 95,
             3: 200,
@@ -264,8 +264,8 @@ PLAZA_RATES = {
             6: 380,
         },
     },
-    'dhaneshwar': {
-        'single': {
+    "dhaneshwar": {
+        "single": {
             1: 80,
             2: 130,
             3: 275,
@@ -273,7 +273,7 @@ PLAZA_RATES = {
             5: 430,
             6: 525,
         },
-        'return': {
+        "return": {
             1: 40,
             2: 65,
             3: 140,
@@ -281,7 +281,7 @@ PLAZA_RATES = {
             5: 215,
             6: 265,
         },
-        'local': {
+        "local": {
             1: 40,
             2: 65,
             3: 140,
@@ -290,8 +290,8 @@ PLAZA_RATES = {
             6: 265,
         },
     },
-    'galia': {
-        'single': {
+    "galia": {
+        "single": {
             1: 50,
             2: 80,
             3: 165,
@@ -299,7 +299,7 @@ PLAZA_RATES = {
             5: 260,
             6: 315,
         },
-        'return': {
+        "return": {
             1: 50,
             2: 80,
             3: 165,
@@ -307,7 +307,7 @@ PLAZA_RATES = {
             5: 260,
             6: 315,
         },
-        'local': {
+        "local": {
             1: 50,
             2: 80,
             3: 165,
@@ -316,8 +316,8 @@ PLAZA_RATES = {
             6: 315,
         },
     },
-    'gadanki': {
-        'single': {
+    "gadanki": {
+        "single": {
             1: 130,
             2: 210,
             3: 440,
@@ -325,7 +325,7 @@ PLAZA_RATES = {
             5: 690,
             6: 840,
         },
-        'return': {
+        "return": {
             1: 65,
             2: 105,
             3: 220,
@@ -333,7 +333,7 @@ PLAZA_RATES = {
             5: 345,
             6: 420,
         },
-        'local': {
+        "local": {
             1: 65,
             2: 105,
             3: 220,
@@ -342,8 +342,8 @@ PLAZA_RATES = {
             6: 420,
         },
     },
-    'hebbalu': {
-        'single': {
+    "hebbalu": {
+        "single": {
             1: 135,
             2: 220,
             3: 455,
@@ -351,7 +351,7 @@ PLAZA_RATES = {
             5: 715,
             6: 875,
         },
-        'return': {
+        "return": {
             1: 70,
             2: 105,
             3: 230,
@@ -359,7 +359,7 @@ PLAZA_RATES = {
             5: 360,
             6: 435,
         },
-        'local': {
+        "local": {
             1: 70,
             2: 110,
             3: 230,
@@ -368,8 +368,8 @@ PLAZA_RATES = {
             6: 435,
         },
     },
-    'faridpur': {
-        'single': {
+    "faridpur": {
+        "single": {
             1: 135,
             2: 220,
             3: 455,
@@ -377,7 +377,7 @@ PLAZA_RATES = {
             5: 715,
             6: 875,
         },
-        'return': {
+        "return": {
             1: 70,
             2: 105,
             3: 230,
@@ -385,7 +385,7 @@ PLAZA_RATES = {
             5: 360,
             6: 435,
         },
-        'local': {
+        "local": {
             1: 70,
             2: 110,
             3: 230,
@@ -394,8 +394,8 @@ PLAZA_RATES = {
             6: 435,
         },
     },
-    'khawasa': {
-        'single': {
+    "khawasa": {
+        "single": {
             1: 110,
             2: 175,
             3: 370,
@@ -403,7 +403,7 @@ PLAZA_RATES = {
             5: 585,
             6: 710,
         },
-        'return': {
+        "return": {
             1: 110,
             2: 175,
             3: 370,
@@ -411,7 +411,7 @@ PLAZA_RATES = {
             5: 585,
             6: 710,
         },
-        'local': {
+        "local": {
             1: 110,
             2: 175,
             3: 370,
@@ -420,8 +420,8 @@ PLAZA_RATES = {
             6: 710,
         },
     },
-    'khemana': {
-        'single': {
+    "khemana": {
+        "single": {
             1: 75,
             2: 125,
             3: 260,
@@ -429,7 +429,7 @@ PLAZA_RATES = {
             5: 410,
             6: 500,
         },
-        'return': {
+        "return": {
             1: 40,
             2: 60,
             3: 135,
@@ -437,7 +437,7 @@ PLAZA_RATES = {
             5: 205,
             6: 250,
         },
-        'local': {
+        "local": {
             1: 40,
             2: 60,
             3: 130,
@@ -446,8 +446,8 @@ PLAZA_RATES = {
             6: 250,
         },
     },
-    'kherwasani': {
-        'single': {
+    "kherwasani": {
+        "single": {
             1: 170,
             2: 270,
             3: 570,
@@ -455,7 +455,7 @@ PLAZA_RATES = {
             5: 895,
             6: 1090,
         },
-        'return': {
+        "return": {
             1: 85,
             2: 140,
             3: 285,
@@ -463,7 +463,7 @@ PLAZA_RATES = {
             5: 445,
             6: 545,
         },
-        'local': {
+        "local": {
             1: 85,
             2: 135,
             3: 285,
@@ -472,8 +472,8 @@ PLAZA_RATES = {
             6: 545,
         },
     },
-    'madai': {
-        'single': {
+    "madai": {
+        "single": {
             1: 115,
             2: 180,
             3: 380,
@@ -481,7 +481,7 @@ PLAZA_RATES = {
             5: 595,
             6: 725,
         },
-        'return': {
+        "return": {
             1: 55,
             2: 95,
             3: 190,
@@ -489,7 +489,7 @@ PLAZA_RATES = {
             5: 300,
             6: 360,
         },
-        'local': {
+        "local": {
             1: 55,
             2: 90,
             3: 190,
@@ -498,8 +498,8 @@ PLAZA_RATES = {
             6: 360,
         },
     },
-    'madapam': {
-        'single': {
+    "madapam": {
+        "single": {
             1: 100,
             2: 160,
             3: 335,
@@ -507,7 +507,7 @@ PLAZA_RATES = {
             5: 530,
             6: 645,
         },
-        'return': {
+        "return": {
             1: 100,
             2: 160,
             3: 335,
@@ -515,7 +515,7 @@ PLAZA_RATES = {
             5: 530,
             6: 645,
         },
-        'local': {
+        "local": {
             1: 100,
             2: 160,
             3: 335,
@@ -524,8 +524,8 @@ PLAZA_RATES = {
             6: 645,
         },
     },
-    'mohtara': {
-        'single': {
+    "mohtara": {
+        "single": {
             1: 130,
             2: 205,
             3: 435,
@@ -533,7 +533,7 @@ PLAZA_RATES = {
             5: 680,
             6: 830,
         },
-        'return': {
+        "return": {
             1: 65,
             2: 105,
             3: 215,
@@ -541,7 +541,7 @@ PLAZA_RATES = {
             5: 340,
             6: 415,
         },
-        'local': {
+        "local": {
             1: 65,
             2: 105,
             3: 215,
@@ -550,8 +550,8 @@ PLAZA_RATES = {
             6: 415,
         },
     },
-    'mudhipar': {
-        'single': {
+    "mudhipar": {
+        "single": {
             1: 50,
             2: 80,
             3: 165,
@@ -559,7 +559,7 @@ PLAZA_RATES = {
             5: 260,
             6: 320,
         },
-        'return': {
+        "return": {
             1: 50,
             2: 80,
             3: 165,
@@ -567,7 +567,7 @@ PLAZA_RATES = {
             5: 260,
             6: 320,
         },
-        'local': {
+        "local": {
             1: 50,
             2: 80,
             3: 165,
@@ -576,8 +576,8 @@ PLAZA_RATES = {
             6: 320,
         },
     },
-    'marripalem': {
-        'single': {
+    "marripalem": {
+        "single": {
             1: 50,
             2: 80,
             3: 165,
@@ -585,7 +585,7 @@ PLAZA_RATES = {
             5: 260,
             6: 320,
         },
-        'return': {
+        "return": {
             1: 25,
             2: 40,
             3: 85,
@@ -593,7 +593,7 @@ PLAZA_RATES = {
             5: 130,
             6: 155,
         },
-        'local': {
+        "local": {
             1: 25,
             2: 40,
             3: 85,
@@ -602,8 +602,8 @@ PLAZA_RATES = {
             6: 160,
         },
     },
-    'nathavalasa': {
-        'single': {
+    "nathavalasa": {
+        "single": {
             1: 115,
             2: 180,
             3: 380,
@@ -611,7 +611,7 @@ PLAZA_RATES = {
             5: 600,
             6: 730,
         },
-        'return': {
+        "return": {
             1: 115,
             2: 180,
             3: 380,
@@ -619,7 +619,7 @@ PLAZA_RATES = {
             5: 600,
             6: 730,
         },
-        'local': {
+        "local": {
             1: 115,
             2: 180,
             3: 380,
@@ -628,8 +628,8 @@ PLAZA_RATES = {
             6: 730,
         },
     },
-    'odhaki_paipkhar': {
-        'single': {
+    "odhaki_paipkhar": {
+        "single": {
             1: 120,
             2: 190,
             3: 400,
@@ -637,7 +637,7 @@ PLAZA_RATES = {
             5: 630,
             6: 765,
         },
-        'return': {
+        "return": {
             1: 120,
             2: 190,
             3: 400,
@@ -645,7 +645,7 @@ PLAZA_RATES = {
             5: 630,
             6: 765,
         },
-        'local': {
+        "local": {
             1: 120,
             2: 190,
             3: 400,
@@ -654,8 +654,8 @@ PLAZA_RATES = {
             6: 765,
         },
     },
-    'patgaon': {
-        'single': {
+    "patgaon": {
+        "single": {
             1: 105,
             2: 175,
             3: 360,
@@ -663,7 +663,7 @@ PLAZA_RATES = {
             5: 570,
             6: 690,
         },
-        'return': {
+        "return": {
             1: 105,
             2: 175,
             3: 360,
@@ -671,7 +671,7 @@ PLAZA_RATES = {
             5: 570,
             6: 690,
         },
-        'local': {
+        "local": {
             1: 105,
             2: 175,
             3: 360,
@@ -680,8 +680,8 @@ PLAZA_RATES = {
             6: 690,
         },
     },
-    'pullur': {
-        'single': {
+    "pullur": {
+        "single": {
             1: 140,
             2: 225,
             3: 475,
@@ -689,7 +689,7 @@ PLAZA_RATES = {
             5: 745,
             6: 905,
         },
-        'return': {
+        "return": {
             1: 70,
             2: 115,
             3: 240,
@@ -697,7 +697,7 @@ PLAZA_RATES = {
             5: 375,
             6: 445,
         },
-        'local': {
+        "local": {
             1: 70,
             2: 115,
             3: 240,
@@ -706,34 +706,34 @@ PLAZA_RATES = {
             6: 445,
         },
     },
-    'raibha': {
-        'single': {
+    "raibha": {
+        "single": {
             1: 85,
             2: 135,
             3: 285,
-            4: 310,  
-            5: 445,  
-            6: 540,  
+            4: 310,
+            5: 445,
+            6: 540,
         },
-        'return': {
-            1: 40,   
-            2: 70,   
-            3: 140,  
-            4: 155,  
-            5: 220,  
-            6: 270,  
+        "return": {
+            1: 40,
+            2: 70,
+            3: 140,
+            4: 155,
+            5: 220,
+            6: 270,
         },
-        'local': {
-            1: 40,  
-            2: 70,  
-            3: 140, 
-            4: 155, 
-            5: 220, 
-            6: 270, 
+        "local": {
+            1: 40,
+            2: 70,
+            3: 140,
+            4: 155,
+            5: 220,
+            6: 270,
         },
     },
-    'raksha': {
-        'single': {
+    "raksha": {
+        "single": {
             1: 135,
             2: 220,
             3: 460,
@@ -741,7 +741,7 @@ PLAZA_RATES = {
             5: 720,
             6: 880,
         },
-        'return': {
+        "return": {
             1: 70,
             2: 110,
             3: 230,
@@ -749,7 +749,7 @@ PLAZA_RATES = {
             5: 365,
             6: 440,
         },
-        'local': {
+        "local": {
             1: 70,
             2: 110,
             3: 230,
@@ -758,8 +758,8 @@ PLAZA_RATES = {
             6: 440,
         },
     },
-    'tarapongi': {
-        'single': {
+    "tarapongi": {
+        "single": {
             1: 105,
             2: 165,
             3: 350,
@@ -767,7 +767,7 @@ PLAZA_RATES = {
             5: 545,
             6: 665,
         },
-        'return': {
+        "return": {
             1: 105,
             2: 165,
             3: 350,
@@ -775,7 +775,7 @@ PLAZA_RATES = {
             5: 545,
             6: 665,
         },
-        'local': {
+        "local": {
             1: 105,
             2: 165,
             3: 350,
@@ -784,8 +784,8 @@ PLAZA_RATES = {
             6: 665,
         },
     },
-    'undavariya': {
-        'single': {
+    "undavariya": {
+        "single": {
             1: 50,
             2: 80,
             3: 170,
@@ -793,7 +793,7 @@ PLAZA_RATES = {
             5: 265,
             6: 320,
         },
-        'return': {
+        "return": {
             1: 25,
             2: 40,
             3: 80,
@@ -801,7 +801,7 @@ PLAZA_RATES = {
             5: 130,
             6: 160,
         },
-        'local': {
+        "local": {
             1: 25,
             2: 40,
             3: 85,
@@ -810,8 +810,8 @@ PLAZA_RATES = {
             6: 160,
         },
     },
-    'usaka': {
-        'single': {
+    "usaka": {
+        "single": {
             1: 110,
             2: 180,
             3: 380,
@@ -819,7 +819,7 @@ PLAZA_RATES = {
             5: 590,
             6: 720,
         },
-        'return': {
+        "return": {
             1: 55,
             2: 90,
             3: 185,
@@ -827,7 +827,7 @@ PLAZA_RATES = {
             5: 300,
             6: 360,
         },
-        'local': {
+        "local": {
             1: 55,
             2: 90,
             3: 190,
@@ -836,8 +836,8 @@ PLAZA_RATES = {
             6: 360,
         },
     },
-    'veeravalli': {
-        'single': {
+    "veeravalli": {
+        "single": {
             1: 165,
             2: 265,
             3: 555,
@@ -845,7 +845,7 @@ PLAZA_RATES = {
             5: 870,
             6: 1060,
         },
-        'return': {
+        "return": {
             1: 165,
             2: 265,
             3: 555,
@@ -853,7 +853,7 @@ PLAZA_RATES = {
             5: 870,
             6: 1060,
         },
-        'local': {
+        "local": {
             1: 165,
             2: 265,
             3: 555,
@@ -862,8 +862,34 @@ PLAZA_RATES = {
             6: 1060,
         },
     },
-    'bahadrabad': {
-        'single': {
+    "bahadrabad": {
+        "single": {
+            1: 130,
+            2: 210,
+            3: 440,
+            4: 480,
+            5: 690,
+            6: 840,
+        },
+        "return": {
+            1: 65,
+            2: 105,
+            3: 220,
+            4: 240,
+            5: 345,
+            6: 420,
+        },
+        "local": {
+            1: 65,
+            2: 105,
+            3: 220,
+            4: 240,
+            5: 345,
+            6: 420,
+        },
+    },
+    "dukkavanipalem": {
+        "single": {
             1: 50,
             2: 80,
             3: 165,
@@ -871,7 +897,7 @@ PLAZA_RATES = {
             5: 260,
             6: 320,
         },
-        'return': {
+        "return": {
             1: 50,
             2: 80,
             3: 165,
@@ -879,7 +905,7 @@ PLAZA_RATES = {
             5: 260,
             6: 320,
         },
-        'local': {
+        "local": {
             1: 50,
             2: 80,
             3: 165,
@@ -888,34 +914,8 @@ PLAZA_RATES = {
             6: 320,
         },
     },
-    'dukkavanipalem': {
-        'single': {
-            1: 50,
-            2: 80,
-            3: 165,
-            4: 180,
-            5: 260,
-            6: 320,
-        },
-        'return': {
-            1: 50,
-            2: 80,
-            3: 165,
-            4: 180,
-            5: 260,
-            6: 320,
-        },
-        'local': {
-            1: 50,
-            2: 80,
-            3: 165,
-            4: 180,
-            5: 260,
-            6: 320,
-        },
-    },
-    'hattargi': {
-        'single': {
+    "hattargi": {
+        "single": {
             1: 25,
             2: 40,
             3: 80,
@@ -923,7 +923,7 @@ PLAZA_RATES = {
             5: 130,
             6: 155,
         },
-        'return': {
+        "return": {
             1: 10,
             2: 20,
             3: 45,
@@ -931,7 +931,7 @@ PLAZA_RATES = {
             5: 65,
             6: 80,
         },
-        'local': {
+        "local": {
             1: 10,
             2: 20,
             3: 40,
@@ -940,8 +940,8 @@ PLAZA_RATES = {
             6: 80,
         },
     },
-    'kelapur': {
-        'single': {
+    "kelapur": {
+        "single": {
             1: 115,
             2: 185,
             3: 385,
@@ -949,7 +949,7 @@ PLAZA_RATES = {
             5: 650,
             6: 740,
         },
-        'return': {
+        "return": {
             1: 55,
             2: 90,
             3: 195,
@@ -957,7 +957,7 @@ PLAZA_RATES = {
             5: 305,
             6: 365,
         },
-        'local': {
+        "local": {
             1: 55,
             2: 90,
             3: 195,
@@ -966,8 +966,8 @@ PLAZA_RATES = {
             6: 365,
         },
     },
-    'kognoli': {
-        'single': {
+    "kognoli": {
+        "single": {
             1: 60,
             2: 100,
             3: 210,
@@ -975,7 +975,7 @@ PLAZA_RATES = {
             5: 330,
             6: 400,
         },
-        'return': {
+        "return": {
             1: 35,
             2: 50,
             3: 105,
@@ -983,7 +983,7 @@ PLAZA_RATES = {
             5: 165,
             6: 200,
         },
-        'local': {
+        "local": {
             1: 30,
             2: 50,
             3: 105,
@@ -992,8 +992,8 @@ PLAZA_RATES = {
             6: 200,
         },
     },
-    'mahasamudram': {
-        'single': {
+    "mahasamudram": {
+        "single": {
             1: 50,
             2: 80,
             3: 165,
@@ -1001,7 +1001,7 @@ PLAZA_RATES = {
             5: 260,
             6: 320,
         },
-        'return': {
+        "return": {
             1: 50,
             2: 80,
             3: 165,
@@ -1009,7 +1009,7 @@ PLAZA_RATES = {
             5: 260,
             6: 320,
         },
-        'local': {
+        "local": {
             1: 50,
             2: 80,
             3: 165,
@@ -1018,8 +1018,8 @@ PLAZA_RATES = {
             6: 320,
         },
     },
-    'maigalganj': {
-        'single': {
+    "maigalganj": {
+        "single": {
             1: 50,
             2: 80,
             3: 165,
@@ -1027,7 +1027,7 @@ PLAZA_RATES = {
             5: 260,
             6: 320,
         },
-        'return': {
+        "return": {
             1: 50,
             2: 80,
             3: 165,
@@ -1035,70 +1035,622 @@ PLAZA_RATES = {
             5: 260,
             6: 320,
         },
-        'local': {
+        "local": {
             1: 50,
             2: 80,
             3: 165,
             4: 180,
             5: 260,
             6: 320,
+        },
+    },
+}
+
+# Rates effective from April 2026 onwards (new tariff).
+# PLAZA_RATES above is kept for historical processing.
+# hattergi and kognoli rates are not updated in the new tariff.
+Plaza_Rates_Apr26_onwards = {
+    "aroli": {
+        "single": {
+            1: 85,
+            2: 140,
+            3: 290,
+            4: 315,
+            5: 455,
+            6: 550,
+        },
+        "return": {
+            1: 45,
+            2: 65,
+            3: 145,
+            4: 160,
+            5: 225,
+            6: 275,
+        },
+        "local": {
+            1: 45,
+            2: 70,
+            3: 145,
+            4: 160,
+            5: 225,
+            6: 275,
+        },
+    },
+    "balibhasa": {
+        "single": {
+            1: 95,
+            2: 155,
+            3: 325,
+            4: 355,
+            5: 510,
+            6: 620,
+        },
+        "return": {
+            1: 50,
+            2: 75,
+            3: 160,
+            4: 175,
+            5: 255,
+            6: 310,
+        },
+        "local": {
+            1: 50,
+            2: 75,
+            3: 160,
+            4: 175,
+            5: 255,
+            6: 310,
+        },
+    },
+    "bahadrabad": {
+        "single": {
+            1: 135,
+            2: 215,
+            3: 450,
+            4: 490,
+            5: 705,
+            6: 860,
+        },
+        "return": {
+            1: 65,
+            2: 110,
+            3: 225,
+            4: 245,
+            5: 350,
+            6: 430,
+        },
+        "local": {
+            1: 65,
+            2: 110,
+            3: 225,
+            4: 245,
+            5: 350,
+            6: 430,
+        },
+    },
+    "daroda": {
+        "single": {
+            1: 125,
+            2: 200,
+            3: 420,
+            4: 460,
+            5: 660,
+            6: 805,
+        },
+        "return": {
+            1: 60,
+            2: 100,
+            3: 215,
+            4: 230,
+            5: 335,
+            6: 405,
+        },
+        "local": {
+            1: 60,
+            2: 100,
+            3: 210,
+            4: 230,
+            5: 330,
+            6: 405,
+        },
+    },
+    "dahalapara": {
+        "single": {
+            1: 100,
+            2: 160,
+            3: 330,
+            4: 360,
+            5: 520,
+            6: 630,
+        },
+        "return": {
+            1: 45,
+            2: 75,
+            3: 165,
+            4: 180,
+            5: 255,
+            6: 315,
+        },
+        "local": {
+            1: 50,
+            2: 80,
+            3: 165,
+            4: 180,
+            5: 260,
+            6: 315,
+        },
+    },
+    "faridpur": {
+        "single": {
+            1: 140,
+            2: 225,
+            3: 475,
+            4: 515,
+            5: 745,
+            6: 905,
+        },
+        "return": {
+            1: 70,
+            2: 115,
+            3: 235,
+            4: 260,
+            5: 370,
+            6: 455,
+        },
+        "local": {
+            1: 70,
+            2: 115,
+            3: 235,
+            4: 260,
+            5: 380,
+            6: 455,
+        },
+    },
+    "galia": {
+        "single": {
+            1: 110,
+            2: 180,
+            3: 375,
+            4: 410,
+            5: 590,
+            6: 715,
+        },
+        "return": {
+            1: 55,
+            2: 90,
+            3: 190,
+            4: 205,
+            5: 295,
+            6: 360,
+        },
+        "local": {
+            1: 55,
+            2: 90,
+            3: 190,
+            4: 205,
+            5: 295,
+            6: 360,
+        },
+    },
+    "bhojpuree": {
+        "single": {
+            1: 50,
+            2: 85,
+            3: 175,
+            4: 190,
+            5: 275,
+            6: 335,
+        },
+        "return": {
+            1: 30,
+            2: 40,
+            3: 90,
+            4: 95,
+            5: 135,
+            6: 165,
+        },
+        "local": {
+            1: 25,
+            2: 40,
+            3: 90,
+            4: 95,
+            5: 135,
+            6: 165,
+        },
+    },
+    "dukkavanipalem": {
+        "single": {
+            1: 45,
+            2: 75,
+            3: 160,
+            4: 175,
+            5: 250,
+            6: 300,
+        },
+        "return": {
+            1: 25,
+            2: 40,
+            3: 75,
+            4: 85,
+            5: 120,
+            6: 155,
+        },
+        "local": {
+            1: 25,
+            2: 40,
+            3: 80,
+            4: 85,
+            5: 125,
+            6: 150,
+        },
+    },
+    "dhaneshwar": {
+        "single": {
+            1: 85,
+            2: 130,
+            3: 280,
+            4: 310,
+            5: 440,
+            6: 540,
+        },
+        "return": {
+            1: 40,
+            2: 70,
+            3: 145,
+            4: 150,
+            5: 225,
+            6: 270,
+        },
+        "local": {
+            1: 40,
+            2: 65,
+            3: 140,
+            4: 155,
+            5: 220,
+            6: 270,
+        },
+    },
+    "gadanki": {
+        "single": {
+            1: 130,
+            2: 210,
+            3: 440,
+            4: 480,
+            5: 690,
+            6: 840,
+        },
+        "return": {
+            1: 65,
+            2: 105,
+            3: 220,
+            4: 240,
+            5: 345,
+            6: 420,
+        },
+        "local": {
+            1: 65,
+            2: 105,
+            3: 220,
+            4: 240,
+            5: 345,
+            6: 420,
+        },
+    },
+    "kelapur": {
+        "single": {
+            1: 115,
+            2: 190,
+            3: 395,
+            4: 430,
+            5: 620,
+            6: 735,
+        },
+        "return": {
+            1: 60,
+            2: 95,
+            3: 200,
+            4: 220,
+            5: 310,
+            6: 400,
+        },
+        "local": {
+            1: 60,
+            2: 95,
+            3: 200,
+            4: 215,
+            5: 310,
+            6: 380,
+        },
+    },
+    "marripalem": {
+        "single": {
+            1: 50,
+            2: 80,
+            3: 165,
+            4: 180,
+            5: 260,
+            6: 320,
+        },
+        "return": {
+            1: 25,
+            2: 40,
+            3: 85,
+            4: 90,
+            5: 130,
+            6: 155,
+        },
+        "local": {
+            1: 25,
+            2: 40,
+            3: 85,
+            4: 90,
+            5: 130,
+            6: 160,
+        },
+    },
+    "maigalganj": {
+        "single": {
+            1: 140,
+            2: 230,
+            3: 480,
+            4: 525,
+            5: 755,
+            6: 920,
+        },
+        "return": {
+            1: 75,
+            2: 115,
+            3: 245,
+            4: 265,
+            5: 360,
+            6: 460,
+        },
+        "local": {
+            1: 70,
+            2: 115,
+            3: 240,
+            4: 265,
+            5: 380,
+            6: 460,
+        },
+    },
+    "patgaon": {
+        "single": {
+            1: 110,
+            2: 180,
+            3: 375,
+            4: 410,
+            5: 590,
+            6: 715,
+        },
+        "return": {
+            1: 55,
+            2: 90,
+            3: 190,
+            4: 205,
+            5: 295,
+            6: 360,
+        },
+        "local": {
+            1: 55,
+            2: 90,
+            3: 190,
+            4: 205,
+            5: 295,
+            6: 360,
+        },
+    },
+    "raibha": {
+        "single": {
+            1: 85,
+            2: 140,
+            3: 290,
+            4: 315,
+            5: 455,
+            6: 555,
+        },
+        "return": {
+            1: 45,
+            2: 70,
+            3: 145,
+            4: 160,
+            5: 230,
+            6: 280,
+        },
+        "local": {
+            1: 45,
+            2: 70,
+            3: 145,
+            4: 160,
+            5: 230,
+            6: 280,
+        },
+    },
+    "raksha": {
+        "single": {
+            1: 140,
+            2: 225,
+            3: 470,
+            4: 515,
+            5: 740,
+            6: 900,
+        },
+        "return": {
+            1: 70,
+            2: 115,
+            3: 240,
+            4: 260,
+            5: 370,
+            6: 450,
+        },
+        "local": {
+            1: 70,
+            2: 115,
+            3: 235,
+            4: 260,
+            5: 370,
+            6: 450,
+        },
+    },
+    "mahasamudram": {
+        "single": {
+            1: 105,
+            2: 170,
+            3: 355,
+            4: 390,
+            5: 560,
+            6: 680,
+        },
+        "return": {
+            1: 55,
+            2: 85,
+            3: 180,
+            4: 195,
+            5: 280,
+            6: 340,
+        },
+        "local": {
+            1: 55,
+            2: 85,
+            3: 180,
+            4: 195,
+            5: 280,
+            6: 340,
+        },
+    },
+    "kognoli": {
+        "single": {
+            1: 60,
+            2: 100,
+            3: 210,
+            4: 230,
+            5: 330,
+            6: 400,
+        },
+        "return": {
+            1: 35,
+            2: 50,
+            3: 105,
+            4: 115,
+            5: 165,
+            6: 200,
+        },
+        "local": {
+            1: 30,
+            2: 50,
+            3: 105,
+            4: 115,
+            5: 165,
+            6: 200,
+        },
+    },
+    "hattargi": {
+        "single": {
+            1: 25,
+            2: 40,
+            3: 80,
+            4: 90,
+            5: 130,
+            6: 155,
+        },
+        "return": {
+            1: 10,
+            2: 20,
+            3: 45,
+            4: 45,
+            5: 65,
+            6: 80,
+        },
+        "local": {
+            1: 10,
+            2: 20,
+            3: 40,
+            4: 45,
+            5: 65,
+            6: 80,
+        },
+    },
+    "usaka": {
+        "single": {
+            1: 115,
+            2: 185,
+            3: 385,
+            4: 420,
+            5: 605,
+            6: 740,
+        },
+        "return": {
+            1: 55,
+            2: 90,
+            3: 195,
+            4: 215,
+            5: 305,
+            6: 370,
+        },
+        "local": {
+            1: 55,
+            2: 90,
+            3: 195,
+            4: 210,
+            5: 305,
+            6: 370,
         },
     },
 }
 
 plaza_round_data = {
-    'dhaneshwar': '1st',
-    'aroli': '1st',
-    'bassi': '1st',
-    'hattargi': '1st',
-    'kognoli': '1st',
-    'raibha': '2nd',
-    'raksha': '2nd',
-    'kelapur': '2nd',
-    'daroda': '2nd',
-    'pullur': '1st',
-    'undavariya': '1st',
-    'khemana': '1st',
-    'odhaki_paipkhar': '3rd',
-    'kherwasani': '3rd',
-    'mohtara': '3rd',
-    'boharipar': '3rd',
-    'madai': '3rd',
-    'khawasa': '3rd',
-    'hebbalu': '3rd',
-    'chalageri': '3rd',
-    'bankapur': '3rd',
-    'usaka': '3rd',
-    'balibhasa': '3rd',
-    'galia': '3rd',
-    'patgaon': '3rd',
-    'dahalapara': '3rd',
-    'madapam': '4th',
-    'nathavalasa': '4th',
-    'dukkavanipalem': '4th',
-    'marripalem': '4th',
-    'veeravalli': '4th',
-    'gadanki': '4th',
-    'mahasamudram': '4th',
-    'chhapar': '4th',
-    'bahadrabad': '4th',
-    'faridpur': '4th',
-    'maigalganj': '4th',
-    'tarapongi': '4th',
-    'bhojpuree': '4th',
-    'mudhipar': '4th'
+    "dhaneshwar": "1st",
+    "aroli": "1st",
+    "bassi": "1st",
+    "hattargi": "1st",
+    "kognoli": "1st",
+    "raibha": "2nd",
+    "raksha": "2nd",
+    "kelapur": "2nd",
+    "daroda": "2nd",
+    "pullur": "1st",
+    "undavariya": "1st",
+    "khemana": "1st",
+    "odhaki_paipkhar": "3rd",
+    "kherwasani": "3rd",
+    "mohtara": "3rd",
+    "boharipar": "3rd",
+    "madai": "3rd",
+    "khawasa": "3rd",
+    "hebbalu": "3rd",
+    "chalageri": "3rd",
+    "bankapur": "3rd",
+    "usaka": "3rd",
+    "balibhasa": "3rd",
+    "galia": "3rd",
+    "patgaon": "3rd",
+    "dahalapara": "3rd",
+    "madapam": "4th",
+    "nathavalasa": "4th",
+    "dukkavanipalem": "4th",
+    "marripalem": "4th",
+    "veeravalli": "4th",
+    "gadanki": "4th",
+    "mahasamudram": "4th",
+    "chhapar": "4th",
+    "bahadrabad": "4th",
+    "faridpur": "4th",
+    "maigalganj": "4th",
+    "tarapongi": "4th",
+    "bhojpuree": "4th",
+    "mudhipar": "4th",
 }
 
 
-def get_plaza_rate(plaza_name, index, section='single'):
+def get_plaza_rate(plaza_name, index, section="single"):
     """
     Get the rate for a specific plaza, section, and index.
-    
+
     Args:
         plaza_name: Name of the plaza (entity_name from database)
         section: Section name (default: 'main')
         index: Index value (1-6)
-    
+
     Returns:
         Rate value if found, None otherwise
     """
@@ -1108,10 +1660,11 @@ def get_plaza_rate(plaza_name, index, section='single'):
             return plaza_data[section].get(index)
     return None
 
+
 def get_all_plaza_names():
     """
     Get list of all plaza names that have rates configured.
-    
+
     Returns:
         List of plaza names
     """
@@ -1122,10 +1675,10 @@ def should_process_entity(entity_name):
     """
     Check if an entity should be processed.
     An entity will be processed if it has rates configured in PLAZA_RATES.
-    
+
     Args:
         entity_name: Name of the entity (entity_name from database)
-    
+
     Returns:
         True if entity has rates configured in PLAZA_RATES, False otherwise
     """
@@ -1135,26 +1688,26 @@ def should_process_entity(entity_name):
 def get_plaza_round(plaza_name):
     """
     Get the round of acquisition for a specific plaza.
-    
+
     Args:
         plaza_name: Name of the plaza (entity_name from database)
-    
+
     Returns:
         Round of acquisition (e.g., '1st', '2nd', '3rd', '4th') if found, None otherwise
     """
     if not plaza_name:
         return None
-    
+
     # Normalize plaza name: convert to lowercase, replace spaces with underscores
-    normalized_name = plaza_name.lower().strip().replace(' ', '_')
-    
+    normalized_name = plaza_name.lower().strip().replace(" ", "_")
+
     # Check if normalized name exists in plaza_round_data
     if normalized_name in plaza_round_data:
         return plaza_round_data[normalized_name]
-    
+
     # Also try with spaces instead of underscores
-    normalized_name_spaces = plaza_name.lower().strip().replace('_', ' ')
+    normalized_name_spaces = plaza_name.lower().strip().replace("_", " ")
     if normalized_name_spaces in plaza_round_data:
         return plaza_round_data[normalized_name_spaces]
-    
+
     return None

@@ -17,46 +17,22 @@ from update_manual_violation_from_excel import (
 from pathlib import Path
 from openpyxl import load_workbook
 import pandas as pd
-from datetime import datetime
+
+from db_config import get_process_date_range_strings
 
 PREFER_CCH_TXN_ID_IN_LIFE_CYCLE_FILES = False
 
 
-# Helper function to process excel file
-def convert_date_format(date_str):
-    if pd.isna(date_str):
-        raise ValueError("Date value is empty.")
-
-    if isinstance(date_str, (pd.Timestamp, datetime)):
-        return date_str.strftime("%Y-%m-%d")
-
-    date_str = str(date_str).strip()
-    if not date_str:
-        raise ValueError("Date value is empty.")
-
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%d/%m/%Y", "%d-%m-%Y"):
-        try:
-            return datetime.strptime(date_str, fmt).strftime("%Y-%m-%d")
-        except ValueError:
-            continue
-
-    parsed_date = pd.to_datetime(date_str, dayfirst=True, errors="coerce")
-    if pd.isna(parsed_date):
-        raise ValueError(f"Unable to parse date value: {date_str}")
-
-    return parsed_date.strftime("%Y-%m-%d")
-
-
 def build_combined_report_filename(
     plaza_name: str, from_date: str, to_date: str
-) -> str:
+    ) -> str:
     safe_plaza = plaza_name.replace(" ", "_").replace("/", "_")
     return f"{safe_plaza}_combined_{from_date}_to_{to_date}.xlsx"
 
 
 def get_combined_report_path(
     plaza_name: str, from_date: str, to_date: str, base_folder: str = "."
-) -> str:
+    ) -> str:
     return str(
         Path(base_folder)
         / build_combined_report_filename(plaza_name, from_date, to_date)
@@ -132,7 +108,7 @@ def process_violation_lookup(
     excel_file_path: str,
     folder_path: str,
     prefer_cch_txn_id_in_life_cycle_files: bool = False,
-):
+     ):
     print(f"\n{'=' * 80}")
     print("VIOLATION LOOKUP PROCESSING")
     print(f"{'=' * 80}")
@@ -177,9 +153,9 @@ def process_violation_lookup(
         print("Warning: No results from folder files. Skipping comparison.")
         return False
 
-    # Match, mark violation_matched, and generate output file(s)
+    # Match and mark violation_matched on the combined report (no intermediate output files)
     print(f"\n{'=' * 80}")
-    print("STEP 3: Matching & generating output")
+    print("STEP 3: Matching & updating combined report")
     print(f"{'=' * 80}")
     print(
         "Flow: Compare single file rows (CCH TXN NO) with folder data (Agency Txn Id)"
@@ -188,14 +164,14 @@ def process_violation_lookup(
         "  -> IDs normalized before compare (whitespace/backticks/special chars removed)"
     )
     print(
-        "  -> For ALL matches: Write 'Journey Type', 'Reader Read Time', and 'Violation Amt' to single Excel file"
+        "  -> For ALL matches: Write 'Journey Type', 'Reader Read Time', and 'Violation Amt' to combined Excel"
     )
     print(
-        "  -> If Violation Amt is non-zero -> mark 'Yes' in violation_matched + write to output"
+        "  -> If Violation Amt is non-zero -> mark 'Yes' in violation_matched"
     )
     print("  -> Otherwise -> mark 'No' in violation_matched")
     print(
-        "  -> Output file(s) contain ONLY matched entries with non-zero Violation Amt"
+        "  -> Does not generate violation_lookup_output files (DB update uses combined report)"
     )
 
     success = match_and_generate_output(
@@ -206,6 +182,7 @@ def process_violation_lookup(
         violation_amts,
         reader_read_times,
         journey_types,
+        write_matched_output=False,
     )
 
     if success:
@@ -228,16 +205,16 @@ def process_plazas_from_excel(
     resume_from_violation_lookup: bool = False,
     combined_report_base_folder: str = ".",
    ):
+    try:
+        from_date, to_date = get_process_date_range_strings()
+    except (RuntimeError, ValueError) as exc:
+        print(f"\nError: {exc}")
+        return
+
+    print(f"\nUsing process date range from .env: {from_date} to {to_date}")
+
     # Load Excel file into a DataFrame
     df = pd.read_excel(excel_file_path)
-
-    # Extract From_Date and To_Date from the first row
-    from_date_str = df.loc[0, "From_Date"]
-    to_date_str = df.loc[0, "To_Date"]
-
-    # Convert 'From_Date' and 'To_Date' to the required format
-    from_date = convert_date_format(from_date_str)
-    to_date = convert_date_format(to_date_str)
 
     if resume_from_violation_lookup:
         print(f"\n{'=' * 80}")
@@ -247,7 +224,7 @@ def process_plazas_from_excel(
         print(
             "Program will resume from violation lookup using the combined report name"
         )
-        print("derived from plaza name and date range in the reference Excel.")
+        print("derived from plaza name and PROCESS_FROM_DATE / PROCESS_TO_DATE in .env.")
         print(f"{'=' * 80}")
 
     # Iterate over each row in the DataFrame
@@ -370,9 +347,9 @@ def process_plazas_from_excel(
 
 if __name__ == "__main__":
     excel_file_path = "Reference_File.xlsx"
-    life_cycle_base_folder = "ICICI_files"
-    # life_cycle_base_folder = "Life_cycle_files_Nov11_to_May25"
-    resume_from_violation_lookup = True
+    # life_cycle_base_folder = "ICICI_files"
+    life_cycle_base_folder = "IDFC_Life_cycle_files_from_July07_to_August09"
+    resume_from_violation_lookup = False
     combined_report_base_folder = "."
 
     process_plazas_from_excel(

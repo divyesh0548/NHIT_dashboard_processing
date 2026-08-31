@@ -35,22 +35,21 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.action_chains import ActionChains
 
 from ocr_module import extract_text, special_character_remover
+from db_config import get_process_date_range_strings
 
 
 LOGIN_URL = "https://acqweb.icici.bank.in/cebacons"
 REFERENCE_EXCEL = "ICICI_Reference_file.xlsx"
 MAX_LOGIN_ATTEMPTS = 5
 DOWNLOADS_FOLDER = r"C:\Users\Divyesh Parmar\Downloads"
-# DATE_RANGE_START = "2026-05-03"  # YYYY-MM-DD
-DATE_RANGE_START = "2026-05-21"  # YYYY-MM-DD
-DATE_RANGE_END = "2026-05-25"    # YYYY-MM-DD
+# Date range comes from PROCESS_FROM_DATE / PROCESS_TO_DATE in project-root .env
 INTERVAL_SOURCE_MODE = "date_range"  # "date_range" or "excel"
 INTERVAL_LIST_EXCEL = "ICICI_interval_list.xlsx"
 SKIPPED_INTERVALS_EXCEL = "ICICI_skipped_intervals.xlsx"
 POLL_SECONDS = 2
 INTERVAL_DAYS = 3  # Max inclusive days per download interval
 MAX_ELEMENT_WAIT_SECONDS = 180
-MAX_REPORT_WAIT_SECONDS = 120
+MAX_REPORT_WAIT_SECONDS = 240
 SCRIPT_DIR = Path(__file__).resolve().parent
 
 
@@ -251,6 +250,62 @@ def handle_duplicate_login_popup(driver, timeout_seconds: int = 5) -> bool:
         return False
 
 
+def handle_post_login_notification_popup(driver, timeout_seconds: int = 6) -> bool:
+    """
+    If the post-login Notification popup appears, click its close button and continue.
+    Popup markup: #Body_divComment with close button #Body_btnClose.
+    Returns True when the popup was found and dismissed.
+    """
+    try:
+        wait = WebDriverWait(driver, timeout_seconds)
+        popup = wait.until(
+            EC.presence_of_element_located((By.ID, "Body_divComment"))
+        )
+        if not popup.is_displayed():
+            return False
+
+        heading = ""
+        try:
+            heading_el = driver.find_element(By.ID, "Body_lblConfirmHead")
+            heading = (heading_el.text or "").strip()
+        except Exception:
+            pass
+
+        close_buttons = driver.find_elements(By.ID, "Body_btnClose")
+        if not close_buttons:
+            close_buttons = popup.find_elements(
+                By.CSS_SELECTOR, "input.popupbtnClose, input[id*='btnClose']"
+            )
+        if not close_buttons:
+            return False
+
+        close_button = close_buttons[0]
+        try:
+            close_button.click()
+        except Exception:
+            driver.execute_script("arguments[0].click();", close_button)
+
+        label = f" ({heading})" if heading else ""
+        print(f"Post-login notification popup detected{label}. Dismissed it.")
+
+        try:
+            WebDriverWait(driver, timeout_seconds).until(
+                EC.invisibility_of_element(popup)
+            )
+        except Exception:
+            try:
+                driver.execute_script(
+                    "arguments[0].style.display = 'none';", popup
+                )
+            except Exception:
+                pass
+
+        time.sleep(1)
+        return True
+    except Exception:
+        return False
+
+
 def wait_for_visible_element(
     driver,
     by,
@@ -402,6 +457,7 @@ def navigate_to_transactions_reconciliation_page(driver):
     Reports -> Reconciliation Reports -> Transactions Reconciliation And Settlements
     """
     print("Navigating menu: Reports -> Reconciliation Reports -> Transactions Reconciliation And Settlements")
+    handle_post_login_notification_popup(driver, timeout_seconds=2)
     wait_for_visible_element(driver, By.ID, "myslidemenu")
 
     reports_link = wait_for_visible_element(
@@ -688,6 +744,7 @@ def login_with_retries(driver, username: str, password: str, max_attempts: int =
             time.sleep(3)
             if is_login_successful(driver):
                 print("Sign-in successful.")
+                handle_post_login_notification_popup(driver)
                 return True
 
             print("Sign-in failed; still on login page.")
@@ -702,13 +759,16 @@ def login_with_retries(driver, username: str, password: str, max_attempts: int =
 def process_reference_file(
     excel_file_path: str = REFERENCE_EXCEL,
     headless: bool = False,
-    date_range_start: str = DATE_RANGE_START,
-    date_range_end: str = DATE_RANGE_END,
+    date_range_start: str | None = None,
+    date_range_end: str | None = None,
     interval_source_mode: str = INTERVAL_SOURCE_MODE,
     interval_excel_path: str = INTERVAL_LIST_EXCEL,
     skipped_intervals_excel_path: str = SKIPPED_INTERVALS_EXCEL,
   ) -> bool:
     """Read rows from reference Excel and perform row-wise login attempts."""
+    if date_range_start is None or date_range_end is None:
+        date_range_start, date_range_end = get_process_date_range_strings()
+
     reference_path = Path(excel_file_path)
     if not reference_path.exists():
         print(f"Reference file not found: {excel_file_path}")
@@ -876,11 +936,18 @@ def process_reference_file(
 
 
 def main():
+    try:
+        date_range_start, date_range_end = get_process_date_range_strings()
+    except (RuntimeError, ValueError) as exc:
+        print(f"\nError: {exc}")
+        return
+
+    print(f"Using process date range from .env: {date_range_start} to {date_range_end}")
     process_reference_file(
         excel_file_path=REFERENCE_EXCEL,
         headless=False,
-        date_range_start=DATE_RANGE_START,
-        date_range_end=DATE_RANGE_END,
+        date_range_start=date_range_start,
+        date_range_end=date_range_end,
         interval_source_mode=INTERVAL_SOURCE_MODE,
         interval_excel_path=INTERVAL_LIST_EXCEL,
         skipped_intervals_excel_path=SKIPPED_INTERVALS_EXCEL,

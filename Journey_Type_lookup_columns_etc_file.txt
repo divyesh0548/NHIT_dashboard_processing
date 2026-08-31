@@ -1,0 +1,33 @@
+23rd Nov to 25th May (With new rates from April-2026)
+
+Galia : Done
+
+Khawasa : Agency (New Rates pending)
+
+Bahadrabad : CCH Trans ID  (Uncategorized Journey type values in ETC file.)
+
+Bhojpuree : New rates are pending.
+
+Dukkavanipalem : Done
+
+Gadanki : CCH column. Done
+
+Marripalem : Done
+
+Tarapongi : Rate pending
+
+Veeravalli : Rates pending
+
+Patgaon : Exit column. Done.
+
+Chhapar : Exit column. New Rates pending
+
+Mahasamudram : Exit column, Done.
+
+Mudhipar : New Rates are pending.
+
+Nathavalasa : Exit column. New Rates are pending
+
+Odhakipaipkhar : New Rates are pending, processed with old rates.
+
+Hattargi/Kognoli : Rates unchanged.

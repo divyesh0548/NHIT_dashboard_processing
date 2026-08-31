@@ -1211,7 +1211,24 @@ def detect_output_files(folder_path):
     return detected_files
 
 
-def match_and_generate_output(excel_file_path, df, folder_path, folder_results, violation_amts, reader_read_times, journey_types):
+def match_and_generate_output(
+    excel_file_path,
+    df,
+    folder_path,
+    folder_results,
+    violation_amts,
+    reader_read_times,
+    journey_types,
+    write_matched_output=False,
+):
+    """
+    Match CCH TXN NO against folder Agency Txn Id data, update the combined Excel,
+    and optionally write violation_lookup_output_{n}.xlsx files.
+
+    Args:
+        write_matched_output: If True, write matched-only output Excel files.
+            Prefer False — DB update uses the updated combined report, not these files.
+    """
     try:
         folder = Path(folder_path)
         
@@ -1340,48 +1357,54 @@ def match_and_generate_output(excel_file_path, df, folder_path, folder_results, 
         print(f"  Marked {yes_count} rows as 'Yes' (matched with non-zero violation amount)")
         print(f"  Marked {no_count} rows as 'No' (no match or zero/empty violation amount)")
         
-        # ---- STEP D: Write output file(s) with ONLY matched entries ----
+        # ---- STEP D: Optionally write output file(s) with ONLY matched entries ----
+        # Skipped by default — combined report already has the matched data used for DB updates.
+        if not write_matched_output:
+            print(f"\n  Skipping violation_lookup_output file generation "
+                  f"({yes_count} non-zero match(es) already written to combined report).")
+            return True
+
         if not matched_entries:
             print(f"\n  No matched entries to write to output file.")
             return True
-        
+
         # Remove duplicate matched entries
         df_matched = pd.DataFrame(
             matched_entries,
             columns=['CCH TXN NO', STANDARD_VIOLATION_AMT_COL, STANDARD_READER_READ_TIME_COL],
         )
         df_matched = df_matched.drop_duplicates(subset=['CCH TXN NO']).sort_values('CCH TXN NO').reset_index(drop=True)
-        
+
         total_matched = len(df_matched)
         print(f"\n  Total unique matched entries for output: {total_matched}")
-        
+
         MAX_EXCEL_ROWS = 1048576
         MAX_DATA_ROWS = MAX_EXCEL_ROWS - 1  # Account for header row
-        
+
         if total_matched <= MAX_DATA_ROWS:
             output_file = folder / "violation_lookup_output_1.xlsx"
             df_matched.to_excel(output_file, index=False, engine='openpyxl')
-            
+
             print(f"✓ Created output file: {output_file}")
             print(f"  Matched rows written: {total_matched}")
         else:
             num_files = (total_matched // MAX_DATA_ROWS) + (1 if total_matched % MAX_DATA_ROWS > 0 else 0)
-            
+
             print(f"  Matched data exceeds Excel limit. Splitting into {num_files} file(s)...")
-            
+
             for i in range(num_files):
                 start_idx = i * MAX_DATA_ROWS
                 end_idx = min((i + 1) * MAX_DATA_ROWS, total_matched)
-                
+
                 df_chunk = df_matched.iloc[start_idx:end_idx].copy()
                 output_file = folder / f"violation_lookup_output_{i+1}.xlsx"
-                
+
                 df_chunk.to_excel(output_file, index=False, engine='openpyxl')
                 print(f"✓ Created output file {i+1}/{num_files}: {output_file}")
                 print(f"  Rows: {len(df_chunk)}")
-            
+
             print(f"\n✓ Created {num_files} output file(s) total")
-        
+
         return True
         
     except Exception as e:

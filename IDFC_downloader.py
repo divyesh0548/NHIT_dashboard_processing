@@ -19,6 +19,7 @@ from ocr_module import extract_text, special_character_remover
 import os
 import subprocess
 from pathlib import Path
+from db_config import load_env_file, get_process_date_range_datetimes
 from datetime import datetime, timedelta
 import shutil
 import pandas as pd
@@ -63,7 +64,7 @@ from IDFC_bot import (
 def split_date_range_to_month_intervals(
     start_dt: datetime,
     end_dt: datetime,
-) -> list[tuple[datetime, datetime]]:
+     ) -> list[tuple[datetime, datetime]]:
     """
     Split an inclusive date range into month-bounded intervals for portal limits.
 
@@ -118,13 +119,13 @@ def move_and_rename_zip_file(
     target_folder="Life_cycle_files",
     from_date=None,
     to_date=None,
-):
+      ):
     """
     Move ZIP file from Downloads folder to target folder and rename with plaza + duration.
     
     Args:
         zip_file_path: Path to the downloaded ZIP file
-        plaza_name: Plaza name to use in the new filename
+        plaza_name: Plaza name (Plaza_name_IDFC) for the subfolder and filename
         target_folder: Folder to move the file to (default: "Life_cycle_files")
         from_date: Interval start date for the filename
         to_date: Interval end date for the filename
@@ -138,8 +139,10 @@ def move_and_rename_zip_file(
             print(f"Error: ZIP file not found: {zip_file_path}")
             return None
         
+        # Save under a Plaza_name_IDFC subfolder; filename stays plaza + duration
+        target_path = Path(target_folder) / sanitize_filename(plaza_name)
+
         # Create target folder if it doesn't exist
-        target_path = Path(target_folder)
         target_path.mkdir(parents=True, exist_ok=True)
         print(f"Target folder: {target_path.absolute()}")
         
@@ -190,7 +193,7 @@ def download_idfc_file(username, password, from_date=None, to_date=None, plaza_n
         password: Password for IDFC login
         from_date: Start date (datetime object)
         to_date: End date (datetime object)
-        plaza_name: Plaza name to select and use for filename
+        plaza_name: Plaza name to select and use for folder/filename
         downloads_folder: Path to Downloads folder
         target_folder: Folder to save the downloaded file (default: "Life_cycle_files")
         headless: Run browser in headless mode
@@ -446,7 +449,31 @@ def download_idfc_file(username, password, from_date=None, to_date=None, plaza_n
     return False
 
 
-def process_plazas_from_excel(excel_file_path, username, password, downloads_folder, target_folder="Life_cycle_files"):
+def parse_config_date(date_value: str) -> datetime:
+    """Parse a configured date string (YYYY-MM-DD or dd-mm-yyyy)."""
+    date_str = str(date_value).strip()
+    for fmt in ("%Y-%m-%d", "%d-%m-%Y", "%d/%m/%Y"):
+        try:
+            return datetime.strptime(date_str, fmt)
+        except ValueError:
+            continue
+
+    parsed = parse_date_mmddyyyy(date_str)
+    if parsed:
+        return parsed
+
+    raise ValueError(f"Could not parse date: {date_value}")
+
+
+def process_plazas_from_excel(
+    excel_file_path,
+    username,
+    password,
+    downloads_folder,
+    from_date,
+    to_date,
+    target_folder="Life_cycle_files",
+   ):
     """
     Read Excel file and download files for all plazas that are not marked as 'done'.
     
@@ -455,12 +482,19 @@ def process_plazas_from_excel(excel_file_path, username, password, downloads_fol
         username: Username for IDFC login
         password: Password for IDFC login
         downloads_folder: Path to Downloads folder
+        from_date: Start date (datetime object)
+        to_date: End date (datetime object)
         target_folder: Folder to save downloaded files (default: "Life_cycle_files")
     
     Returns:
         bool: True if all processing completed, False otherwise
     """
     try:
+        if isinstance(from_date, str):
+            from_date = parse_config_date(from_date)
+        if isinstance(to_date, str):
+            to_date = parse_config_date(to_date)
+
         # Read Excel file
         print("\n" + "="*60)
         print("Reading Excel file...")
@@ -468,37 +502,14 @@ def process_plazas_from_excel(excel_file_path, username, password, downloads_fol
         df = pd.read_excel(excel_file_path, engine='openpyxl')
         
         # Validate required columns
-        required_columns = ['Plaza_name_IDFC', 'Plaza_name_DB', 'Done', 'Date']
+        required_columns = ['Plaza_name_IDFC', 'Plaza_name_DB', 'Done']
         missing_columns = [col for col in required_columns if col not in df.columns]
         if missing_columns:
             print(f"Error: Missing required columns: {missing_columns}")
             return False
         
         print(f"Found {len(df)} rows in Excel file")
-        
-        # Extract dates from Date column (first two non-empty values)
-        dates = []
-        for idx, row in df.iterrows():
-            date_value = row['Date']
-            if pd.notna(date_value):
-                date_str = str(date_value).strip()
-                print(f"  Reading date from row {idx + 2}: '{date_str}'")
-                parsed_date = parse_date_mmddyyyy(date_str)
-                if parsed_date:
-                    dates.append(parsed_date)
-                    print(f"    Parsed as: {parsed_date.strftime('%Y-%m-%d')} ({parsed_date.strftime('%B %d, %Y')})")
-                    if len(dates) >= 2:
-                        break
-                else:
-                    print(f"    Warning: Could not parse this date")
-        
-        if len(dates) < 2:
-            print(f"Error: Could not find 2 dates in Date column. Found {len(dates)} date(s).")
-            print("Please ensure the Date column has two dates in dd-mm-year format.")
-            return False
-        
-        from_date = dates[0]
-        to_date = dates[1]
+
         month_intervals = split_date_range_to_month_intervals(from_date, to_date)
 
         print(f"\nOverall date range for all plazas:")
@@ -644,7 +655,7 @@ def process_plazas_from_excel(excel_file_path, username, password, downloads_fol
         print(f"Total rows processed: {len(pending_rows)}")
         print(f"  ✓ Successful: {success_count}")
         print(f"  ✗ Failed: {fail_count}")
-        print(f"Files saved to: {target_folder}")
+        print(f"Files saved under: {Path(target_folder).absolute()}")
         print("="*80)
         
         return fail_count == 0
@@ -659,18 +670,34 @@ def process_plazas_from_excel(excel_file_path, username, password, downloads_fol
 def main():
     """Main function - download files for all plazas from Excel file"""
     # Configuration
-    USERNAME = "Admin_1"
-    PASSWORD = "Nhai@12345"
+    load_env_file()
+    USERNAME = os.getenv("IDFC_USERNAME")
+    PASSWORD = os.getenv("IDFC_PASSWORD")
+
+    if not USERNAME or not PASSWORD:
+        print(
+            "\nError: IDFC_USERNAME and/or IDFC_PASSWORD not set. "
+            "Add them to the project-root .env file."
+        )
+        return
+
     downloads_folder = r"C:\Users\Divyesh Parmar\Downloads"
-    target_folder = "Life_cycle_files_Nov11_to_May25"  # Folder to save downloaded files
-    
+    target_folder = "Life_cycle_files_from_July07_to_August09"  # Folder to save downloaded files
+
     # Excel file path - UPDATE THIS to your Excel file path
     excel_file_path = "Reference_File - download.xlsx"  # Change this to your actual file path
-    
+
+    try:
+        from_date, to_date = get_process_date_range_datetimes()
+    except (RuntimeError, ValueError) as exc:
+        print(f"\nError: {exc}")
+        return
+
     print("="*80)
     print("IDFC Downloader Bot - Download Files Only")
     print("="*80)
     print(f"Excel file: {excel_file_path}")
+    print(f"Date range: {from_date.strftime('%Y-%m-%d')} to {to_date.strftime('%Y-%m-%d')}")
     print(f"Downloads folder: {downloads_folder}")
     print(f"Target folder: {target_folder}")
     print("="*80)
@@ -687,6 +714,8 @@ def main():
         username=USERNAME,
         password=PASSWORD,
         downloads_folder=downloads_folder,
+        from_date=from_date,
+        to_date=to_date,
         target_folder=target_folder
     )
     
