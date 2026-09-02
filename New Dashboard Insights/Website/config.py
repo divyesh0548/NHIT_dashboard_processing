@@ -18,12 +18,13 @@ LANES: dict[str, str] = {f"L{i:02d}": f"l{i:02d}" for i in range(1, 13)}
 MOP_TYPES: dict[str, str] = {
     "FASTag": "mop_fastag",
     "Cash": "mop_cash",
+    "UPI": "mop_upi",
     "Exempt": "mop_exempt",
 }
 
 MIN_HOUR_WINDOW = 3
 MAX_HOUR_WINDOW = 24
 MIN_DAY_WINDOW = 3
-MAX_DAY_WINDOW = 20
+MAX_DAY_WINDOW = 50
 DEFAULT_TOP_LANES = 5
 CHART_HEIGHT = 760  # 30% taller than previous 585px layout height

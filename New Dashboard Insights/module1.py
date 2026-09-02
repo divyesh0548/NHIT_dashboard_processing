@@ -10,7 +10,7 @@ import re
 import shutil
 import sys
 import tempfile
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 
 import pandas as pd
@@ -40,6 +40,10 @@ from config.mappings import load_mop_mappings, load_vehicle_class_mappings
 PLAZA_NAME = "aroli"
 
 INPUT_FOLDER = r"C:\Divyesh\NHIT_dashboard_processing\New Dashboard Insights\Input"
+
+# Start date limit for the data — rows before this date are skipped (noisy / sparse history).
+START_DATE_LIMIT = "2025-11-23"
+START_DATE_LIMIT_DATE = date.fromisoformat(START_DATE_LIMIT)
 
 # If True, print prepared hourly rows only — no DB connection or inserts.
 DRY_RUN = False
@@ -678,6 +682,7 @@ def prepare_dataframe(df: pd.DataFrame, datetime_format: str) -> pd.DataFrame:
     prepared = prepared[prepared["event_dt"].notna()].copy()
     prepared["hour"] = prepared["event_dt"].map(hour_bucket_label)
     prepared["date"] = prepared["event_dt"].dt.date
+    prepared = prepared[prepared["date"] >= START_DATE_LIMIT_DATE].copy()
     return prepared
 
 
@@ -798,7 +803,7 @@ def process_file(
     conn=None,
     dry_run: bool = False,
     run_log: Path | None = None,
-) -> tuple[int, bool]:
+    ) -> tuple[int, bool]:
     print(f"\nProcessing file: {file_path}")
     try:
         df = read_excel_file(file_path)
@@ -830,6 +835,10 @@ def process_file(
 
     print("  Validation passed for entire file.")
     prepared = prepare_dataframe(df, datetime_format)
+    if prepared.empty:
+        print(f"  No rows on or after {START_DATE_LIMIT}. Skipping file.")
+        return 0, False
+
     hourly_rows = aggregate_hourly_rows(prepared)
 
     if dry_run:

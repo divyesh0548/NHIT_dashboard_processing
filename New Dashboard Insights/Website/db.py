@@ -40,7 +40,7 @@ def fetch_analytics(
     plaza_name: str | None = None,
     start_date=None,
     end_date=None,
-) -> pd.DataFrame:
+    ) -> pd.DataFrame:
     table_name = get_analytics_table_name()
     query = f"SELECT * FROM {table_name} WHERE 1=1"
     params: list = []

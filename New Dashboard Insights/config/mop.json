@@ -1,14 +1,17 @@
 {
   "cash": {
     "db_column": "mop_cash",
-    "aliases": ["CASH-CASH", "CASH-STATIC UPI", "CASH-UPI"]
+    "aliases": ["CASH-CASH", "EXEMPT-CASH"]
+  },
+  "upi": {
+    "db_column": "mop_upi",
+    "aliases": ["CASH-STATIC UPI", "CASH-UPI"]
   },
   "exempt": {
     "db_column": "mop_exempt",
     "aliases": [
       "EXEMPT",
       "EXEMPT-",
-      "EXEMPT-CASH",
       "EXEMPT-NA",
       "EXEMPTION",
       "RUNTHROUGH",

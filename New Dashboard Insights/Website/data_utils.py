@@ -22,6 +22,11 @@ def hour_labels_for_window(start_hour: int, count: int = 6) -> list[str]:
     return [hour_label(start_hour + offset) for offset in range(count)]
 
 
+def hour_labels_from_range(start_hour: int, end_hour: int) -> list[str]:
+    """Build hour bucket labels from an inclusive start and exclusive end hour index."""
+    return hour_labels_for_window(start_hour, max(0, end_hour - start_hour))
+
+
 def format_hour_window(hour_labels: list[str]) -> str:
     if not hour_labels:
         return ""
@@ -77,6 +82,19 @@ def melt_metric_columns(
     return long_df
 
 
+def series_order_by_total(long_df: pd.DataFrame) -> list[str]:
+    if long_df.empty:
+        return []
+    totals = long_df.groupby("series", observed=False)["count"].sum()
+    ranked = totals.sort_values(ascending=False)
+    return [str(name) for name in ranked.index]
+
+
+def series_order_from_labels(long_df: pd.DataFrame, labels: list[str]) -> list[str]:
+    present = {str(value) for value in long_df["series"].astype(str)}
+    return [str(label) for label in labels if str(label) in present]
+
+
 def melt_time_buckets_by_category(
     chart_df: pd.DataFrame,
     column_map: dict[str, str],
@@ -128,7 +146,36 @@ def top_lanes_by_volume(df: pd.DataFrame, top_n: int = DEFAULT_TOP_LANES) -> lis
         return []
     lane_totals = {lane: int(df[col].sum()) for lane, col in LANES.items() if col in df.columns}
     ranked = sorted(lane_totals.items(), key=lambda item: item[1], reverse=True)
-    return [lane for lane, _count in ranked[:top_n]]
+    return [lane for lane, count in ranked[:top_n] if count > 0]
+
+
+def active_lane_map(chart_df: pd.DataFrame) -> dict[str, str]:
+    """Lanes that have a non-zero count in the filtered chart data."""
+    return {
+        lane: col
+        for lane, col in LANES.items()
+        if col in chart_df.columns and int(chart_df[col].sum()) > 0
+    }
+
+
+def category_totals_table(chart_df: pd.DataFrame, column_map: dict[str, str]) -> pd.DataFrame:
+    rows: list[dict[str, object]] = []
+    for label, col in column_map.items():
+        if col not in chart_df.columns:
+            continue
+        count = int(chart_df[col].sum())
+        if count <= 0:
+            continue
+        rows.append({"Category": label, "Count": count})
+
+    if not rows:
+        return pd.DataFrame(columns=["Category", "Count"])
+
+    return (
+        pd.DataFrame(rows)
+        .sort_values("Count", ascending=False)
+        .reset_index(drop=True)
+    )
 
 
 def aggregate_hourly_window(df: pd.DataFrame, selected_date: date, hour_labels: list[str]) -> pd.DataFrame:

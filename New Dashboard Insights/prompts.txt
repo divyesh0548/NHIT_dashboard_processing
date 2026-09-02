@@ -1,1 +1,5 @@
-On opening the website do not select the last date available in DB, but instead select the most earliest date available in DB.
+In hours comparison there are both hours and date. So just select next date and keep the hours same as primary.
+
+In comparison mode, do not show that global total vehicles, but display for each side seperately.
+
+Remove the numbering from chart headers only keep in first tab because there are two charts. In other pages just write chart name.

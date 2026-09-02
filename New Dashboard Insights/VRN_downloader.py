@@ -26,8 +26,8 @@ from db_config import get_db_connection_kwargs, load_env_file, parse_env_date
 # ---------------------------------------------------------------------------
 
 PLAZA_NAME = "aroli"
-FROM_DATE = "2025-12-26"  # YYYY-MM-DD
-TO_DATE = "2026-01-25"    # YYYY-MM-DD
+FROM_DATE = "2025-01-26"  # YYYY-MM-DD
+TO_DATE = "2026-03-31"    # YYYY-MM-DD
 OUTPUT_FOLDER = r"C:\Divyesh\NHIT_dashboard_processing\New Dashboard Insights\VRN Downloads"
 
 DOWNLOAD_TIMEOUT_SECONDS = 120
