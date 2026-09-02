@@ -1,0 +1,51 @@
+Distinct values collected from Excel/CSV files
+Input folder: C:\Divyesh\NHIT_dashboard_processing\New Dashboard Insights\Input
+Files scanned: 189
+
+=== Vehicle Class ===
+Column aliases: MVC, MVC_TLC_CLASS, TC Class
+Files processed: 188
+
+3WHEELER
+BUS-2 AXLE
+BUS-3 AXLE
+CAR\JEEP
+LCV
+OSV
+TRACTOR
+TRUCK 4-6 AXLE
+TRUCK-2 AXLE
+TRUCK-3 AXLE
+
+=== Lane ===
+Column aliases: LANE, Lane No
+Files processed: 188
+
+L01
+L02
+L03
+L04
+L05
+L06
+
+=== MOP ===
+Column aliases: MVC MOP, MVC_TLC_MOP
+Files processed: 188
+
+CASH-CASH
+EXEMPT-CASH
+
+New category - UPI
+CASH-STATIC UPI
+CASH-UPI
+
+EXEMPT
+EXEMPT-
+EXEMPT-NA
+RUNTHROUGH
+RUNTHROUGH-NA
+
+TAG
+TAG-
+TAG-CASH
+TAG-NA

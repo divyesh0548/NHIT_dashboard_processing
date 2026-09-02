@@ -1,0 +1,2 @@
+
+Completed. Total hourly rows inserted: 784. Skipped files: 1.

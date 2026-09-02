@@ -6,7 +6,6 @@ Configure PLAZA_NAME, COLUMN_MAPPING, normalization lists, and INPUT_FOLDER belo
 
 from __future__ import annotations
 
-import os
 import re
 import shutil
 import sys
@@ -22,9 +21,16 @@ from psycopg2 import sql
 from psycopg2.extras import execute_values
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+INSIGHTS_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT_DIR))
+sys.path.insert(0, str(INSIGHTS_DIR))
 
-from db_config import get_db_connection_kwargs, load_env_file
+from config.db import (
+    ensure_analytics_table,
+    get_analytics_db_connection_kwargs,
+    get_analytics_table_name,
+)
+from config.mappings import load_mop_mappings, load_vehicle_class_mappings
 
 
 # ---------------------------------------------------------------------------
@@ -35,6 +41,9 @@ PLAZA_NAME = "aroli"
 
 INPUT_FOLDER = r"C:\Divyesh\NHIT_dashboard_processing\New Dashboard Insights\Input"
 
+# If True, print prepared hourly rows only — no DB connection or inserts.
+DRY_RUN = False
+
 # Excel column name -> logical field
 COLUMN_MAPPING = {
     "datetime": "DATE",
@@ -43,47 +52,43 @@ COLUMN_MAPPING = {
     "mop": "MVC MOP",
 }
 
-# Canonical vehicle class -> list of raw Excel strings that map to it
-VEHICLE_CLASS_NORMALIZATION: dict[str, list[str]] = {
-    "3WHEELER": ["3WHEELER", "3 WHEELER"],
-    "BUS-2-AXLE": ["BUS-2-AXLE", "BUS 2 AXLE"],
-    "CAR/JEEP": ["CAR/JEEP", "CAR", "JEEP"],
-    "LCV": ["LCV"],
-    "TRACTOR": ["TRACTOR"],
-    "TRUCK 4-6 AXLE": ["TRUCK 4-6 AXLE", "TRUCK 4 6 AXLE"],
-    "TRUCK-2-AXLE": ["TRUCK-2-AXLE", "TRUCK 2 AXLE"],
-    "TRUCK-3-AXLE": ["TRUCK-3-AXLE", "TRUCK 3 AXLE"],
-}
+# Each entry: canonical value -> (db_column, excel_aliases)
+# Edit config/vehicle_class.json and config/mop.json to update mappings.
+VEHICLE_CLASS_MAPPINGS = load_vehicle_class_mappings()
+MOP_MAPPINGS = load_mop_mappings()
 
-# Canonical MOP bucket -> list of raw Excel strings that map to it
-MOP_NORMALIZATION: dict[str, list[str]] = {
-    "exempt": ["EXEMPT", "EXEMPTION"],
-    "cash": ["CASH"],
-    "fastag": ["FASTAG", "FAST TAG", "NETC FASTAG"],
-}
-
-LANE_NUMBERS = tuple(f"L{i:02d}" for i in range(1, 13))
+TOTAL_TRANSACTION_COLUMN = "total_transaction"
 
 # Add lane aliases here when you define plaza-specific lane parsing rules.
-LANE_NORMALIZATION: dict[str, list[str]] = {
-    lane: [lane] for lane in LANE_NUMBERS
+LANE_MAPPINGS: dict[str, tuple[str, list[str]]] = {
+    f"L{i:02d}": (f"l{i:02d}", [f"L{i:02d}"]) for i in range(1, 13)
 }
-
-VEHICLE_CLASS_COLUMNS = {
-    "3WHEELER": "vc_3wheeler",
-    "BUS-2-AXLE": "vc_bus_2_axle",
-    "CAR/JEEP": "vc_car_jeep",
-    "LCV": "vc_lcv",
-    "TRACTOR": "vc_tractor",
-    "TRUCK 4-6 AXLE": "vc_truck_4_6_axle",
-    "TRUCK-2-AXLE": "vc_truck_2_axle",
-    "TRUCK-3-AXLE": "vc_truck_3_axle",
-}
-
-LANE_COLUMNS = {lane: lane.lower() for lane in LANE_NUMBERS}
-MOP_COLUMNS = {"exempt": "mop_exempt", "cash": "mop_cash", "fastag": "mop_fastag"}
 
 EXCEL_EXTENSIONS = {".xlsx", ".xls", ".csv"}
+
+# Try these formats per file; the one that parses the most values wins.
+DATETIME_FORMATS_12H = [
+    "%d-%b-%Y %I:%M:%S %p",  # 06-Dec-2025 12:00:52 AM
+    "%d-%b-%Y %I:%M %p",     # 06-Dec-2025 2:00 PM
+    "%m/%d/%Y %I:%M:%S %p",  # 11/24/2025 2:23:35 AM
+    "%m/%d/%Y %I:%M %p",     # 11/24/2025 2:23 AM
+]
+
+DATETIME_FORMATS_24H = [
+    "%d/%m/%Y %H:%M:%S",     # 24/11/2025 14:23:35
+    "%d/%m/%Y %H:%M",
+    "%d-%m-%Y %H:%M:%S",
+    "%d-%m-%Y %H:%M",
+    "%Y-%m-%d %H:%M:%S",
+    "%Y-%m-%d %H:%M",
+]
+
+DATETIME_FORMATS = DATETIME_FORMATS_12H + DATETIME_FORMATS_24H
+
+AM_PM_PATTERN = re.compile(r"\b(AM|PM)\b", re.IGNORECASE)
+
+# Hour bucket stored as TEXT in 24-hour form: "2-3" means 02:00:00-02:59:59.
+# Use 24-hour labels (not "2-3 AM") so afternoon hours stay unambiguous ("14-15").
 
 HEADER_KEYWORDS = [
     "Transaction ID",
@@ -116,23 +121,18 @@ class UnmappedValueError(Exception):
     """Raised when a value cannot be normalized; execution should stop."""
 
 
-def get_analytics_table_name() -> str:
-    load_env_file()
-    table_name = os.environ.get("Analytical_DB_Table", "").strip()
-    if not table_name:
-        raise RuntimeError(
-            "Missing Analytical_DB_Table in project-root .env "
-            "(e.g. Analytical_DB_Table=nhit_analytics)."
-        )
-    return table_name
-
-
 def normalize_key(value) -> str:
     if pd.isna(value):
         return ""
     text = str(value).strip().upper()
     text = re.sub(r"\s+", " ", text)
     return text
+
+
+def is_blank(value) -> bool:
+    if pd.isna(value):
+        return True
+    return str(value).strip() == ""
 
 
 def build_lookup(normalization: dict[str, list[str]]) -> dict[str, str]:
@@ -144,16 +144,162 @@ def build_lookup(normalization: dict[str, list[str]]) -> dict[str, str]:
     return lookup
 
 
+def split_mappings(
+    mappings: dict[str, tuple[str, list[str]]],
+) -> tuple[dict[str, str], dict[str, list[str]]]:
+    """Split combined config into db-column map and excel-alias map."""
+    columns = {canonical: db_column for canonical, (db_column, _aliases) in mappings.items()}
+    normalization = {canonical: aliases for canonical, (_db_column, aliases) in mappings.items()}
+    return columns, normalization
+
+
+VEHICLE_CLASS_COLUMNS, VEHICLE_CLASS_NORMALIZATION = split_mappings(VEHICLE_CLASS_MAPPINGS)
+MOP_COLUMNS, MOP_NORMALIZATION = split_mappings(MOP_MAPPINGS)
+LANE_COLUMNS, LANE_NORMALIZATION = split_mappings(LANE_MAPPINGS)
+
 VEHICLE_CLASS_LOOKUP = build_lookup(VEHICLE_CLASS_NORMALIZATION)
 MOP_LOOKUP = build_lookup(MOP_NORMALIZATION)
 LANE_LOOKUP = build_lookup(LANE_NORMALIZATION)
 
 
-def try_parse_datetime(value):
+def create_run_log_file() -> Path:
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    log_path = INSIGHTS_DIR / f"log-{timestamp}.txt"
+    log_path.write_text(
+        "module1 processing log\n"
+        f"Started: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n"
+        f"{'=' * 80}\n",
+        encoding="utf-8",
+    )
+    return log_path
+
+
+def append_run_log(log_path: Path, message: str) -> None:
+    with log_path.open("a", encoding="utf-8") as log_file:
+        log_file.write(message + "\n")
+
+
+def is_header_detection_error(exc: Exception) -> bool:
+    message = str(exc).lower()
+    return "header" in message and "detect" in message
+
+
+def try_parse_datetime(value, datetime_format: str | None = None):
     try:
-        return parse_datetime(value)
+        return parse_datetime(value, datetime_format=datetime_format)
     except (ValueError, TypeError):
         return None
+
+
+def datetime_has_am_pm(text: str) -> bool:
+    return bool(AM_PM_PATTERN.search(text))
+
+
+def datetime_formats_for_text(text: str) -> list[str]:
+    """Use 12-hour formats when AM/PM is present; otherwise 24-hour formats."""
+    if datetime_has_am_pm(text):
+        return DATETIME_FORMATS_12H
+    return DATETIME_FORMATS_24H
+
+
+def try_parse_with_format(value, datetime_format: str):
+    if pd.isna(value):
+        return None
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, pd.Timestamp):
+        return value.to_pydatetime()
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    if "%p" in datetime_format and not datetime_has_am_pm(text):
+        return None
+    if "%p" not in datetime_format and datetime_has_am_pm(text):
+        return None
+
+    try:
+        return datetime.strptime(text, datetime_format)
+    except ValueError:
+        return None
+
+
+def parse_datetime_with_format(value, datetime_format: str) -> datetime:
+    if pd.isna(value):
+        raise ValueError("Empty datetime value")
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, pd.Timestamp):
+        return value.to_pydatetime()
+
+    text = str(value).strip()
+    return datetime.strptime(text, datetime_format)
+
+
+def detect_datetime_format(values) -> str:
+    """
+    Detect the datetime format used in a file by testing DATETIME_FORMATS
+    against non-empty sample values.
+    """
+    sample = [
+        value
+        for value in values
+        if not pd.isna(value) and str(value).strip()
+    ]
+    if not sample:
+        raise ValueError("No datetime values found to detect format.")
+
+    best_format = None
+    best_count = -1
+
+    for fmt in DATETIME_FORMATS:
+        parsed_count = sum(
+            1 for value in sample if try_parse_with_format(value, fmt) is not None
+        )
+        if parsed_count > best_count:
+            best_count = parsed_count
+            best_format = fmt
+
+    if best_format is None or best_count == 0:
+        raise ValueError("Could not detect datetime format from file values.")
+
+    if best_count < len(sample):
+        print(
+            f"  Warning: detected format '{best_format}' parsed "
+            f"{best_count}/{len(sample)} datetime sample(s)."
+        )
+
+    return best_format
+
+
+def parse_datetime(value, datetime_format: str | None = None) -> datetime:
+    if pd.isna(value):
+        raise ValueError("Empty datetime value")
+    if isinstance(value, datetime):
+        return value
+    if isinstance(value, pd.Timestamp):
+        return value.to_pydatetime()
+
+    if datetime_format:
+        return parse_datetime_with_format(value, datetime_format)
+
+    text = str(value).strip()
+    for fmt in datetime_formats_for_text(text):
+        try:
+            return datetime.strptime(text, fmt)
+        except ValueError:
+            continue
+
+    parsed = pd.to_datetime(text, dayfirst=True, errors="coerce")
+    if pd.isna(parsed):
+        raise ValueError(f"Unable to parse datetime: {value!r}")
+    return parsed.to_pydatetime()
+
+
+def hour_bucket_label(dt: datetime) -> str:
+    """Return 24-hour bucket label, e.g. 2:23 AM -> '2-3', 2:23 PM -> '14-15'."""
+    return f"{dt.hour}-{dt.hour + 1}"
 
 
 def try_normalize_vehicle_class(value):
@@ -177,6 +323,33 @@ def try_normalize_mop(value):
     return MOP_LOOKUP.get(key)
 
 
+def optional_normalize_vehicle_class(value):
+    if is_blank(value):
+        return None
+    return try_normalize_vehicle_class(value)
+
+
+def optional_normalize_lane(value):
+    if is_blank(value):
+        return None
+    return try_normalize_lane(value)
+
+
+def optional_normalize_mop(value):
+    if is_blank(value):
+        return None
+    return try_normalize_mop(value)
+
+
+def safe_parse_datetime(value, datetime_format: str):
+    if is_blank(value):
+        return pd.NaT
+    try:
+        return parse_datetime(value, datetime_format=datetime_format)
+    except (ValueError, TypeError):
+        return pd.NaT
+
+
 def normalize_lane(value) -> str:
     normalized = try_normalize_lane(value)
     if normalized is None:
@@ -198,48 +371,32 @@ def normalize_mop(value) -> str:
     return normalized
 
 
-def parse_datetime(value) -> datetime:
-    if pd.isna(value):
-        raise ValueError("Empty datetime value")
-    if isinstance(value, datetime):
-        return value
-    if isinstance(value, pd.Timestamp):
-        return value.to_pydatetime()
-
-    text = str(value).strip()
-    for fmt in (
-        "%Y-%m-%d %H:%M:%S",
-        "%Y-%m-%d %H:%M",
-        "%d-%m-%Y %H:%M:%S",
-        "%d-%m-%Y %H:%M",
-        "%d/%m/%Y %H:%M:%S",
-        "%d/%m/%Y %H:%M",
-    ):
-        try:
-            return datetime.strptime(text, fmt)
-        except ValueError:
-            continue
-
-    parsed = pd.to_datetime(text, dayfirst=True, errors="coerce")
-    if pd.isna(parsed):
-        raise ValueError(f"Unable to parse datetime: {value!r}")
-    return parsed.to_pydatetime()
-
-
-def hour_bucket_label(dt: datetime) -> str:
-    return f"{dt.hour}-{dt.hour + 1}"
-
-
 def find_header_row(df: pd.DataFrame) -> int | None:
-    """Find the header row by matching known header keywords."""
-    keywords = [keyword.upper() for keyword in HEADER_KEYWORDS]
+    """
+    Find the header row by matching COLUMN_MAPPING Excel names as exact cell values.
+
+    This avoids false positives from report metadata rows such as
+    'FROM DATE' / 'TO DATE' that only contain DATE as a substring.
+    """
+    required_columns = list(COLUMN_MAPPING.values())
+    required_normalized = [normalize_key(column) for column in required_columns]
+
+    best_row = None
+    best_score = 0
 
     for row_index in range(len(df)):
-        row_values = df.iloc[row_index].astype(str).values
-        row_text = " ".join(row_values).upper()
-        keyword_count = sum(1 for keyword in keywords if keyword in row_text)
-        if keyword_count >= 2:
-            return row_index
+        row_cells = {
+            normalize_key(value)
+            for value in df.iloc[row_index]
+            if not pd.isna(value) and str(value).strip()
+        }
+        score = sum(1 for column in required_normalized if column in row_cells)
+        if score > best_score:
+            best_score = score
+            best_row = row_index
+
+    if best_score >= 2:
+        return best_row
 
     return None
 
@@ -425,7 +582,11 @@ def read_excel_file(file_path: Path) -> pd.DataFrame:
     return df.dropna(how="all").reset_index(drop=True)
 
 
-def validate_dataframe(df: pd.DataFrame, file_name: str) -> list[str]:
+def validate_dataframe(
+    df: pd.DataFrame,
+    file_name: str,
+    datetime_format: str,
+) -> list[str]:
     """
     Scan the entire file before any DB work.
     Returns a list of validation error messages; empty list means file is safe to insert.
@@ -441,23 +602,29 @@ def validate_dataframe(df: pd.DataFrame, file_name: str) -> list[str]:
     unmapped_mops: dict[str, int] = {}
 
     for _row_idx, row in df.iterrows():
-        if try_parse_datetime(row[datetime_col]) is None:
-            raw_dt = "" if pd.isna(row[datetime_col]) else str(row[datetime_col]).strip()
-            invalid_datetimes[raw_dt or "<empty>"] = invalid_datetimes.get(raw_dt or "<empty>", 0) + 1
+        datetime_value = row[datetime_col]
+        if not is_blank(datetime_value):
+            if try_parse_datetime(datetime_value, datetime_format=datetime_format) is None:
+                raw_dt = str(datetime_value).strip()
+                invalid_datetimes[raw_dt] = invalid_datetimes.get(raw_dt, 0) + 1
 
-        if try_normalize_vehicle_class(row[vehicle_col]) is None:
-            raw_vc = "" if pd.isna(row[vehicle_col]) else str(row[vehicle_col]).strip()
-            unmapped_vehicle_classes[raw_vc or "<empty>"] = (
-                unmapped_vehicle_classes.get(raw_vc or "<empty>", 0) + 1
-            )
+        vehicle_value = row[vehicle_col]
+        if not is_blank(vehicle_value):
+            if try_normalize_vehicle_class(vehicle_value) is None:
+                raw_vc = str(vehicle_value).strip()
+                unmapped_vehicle_classes[raw_vc] = unmapped_vehicle_classes.get(raw_vc, 0) + 1
 
-        if try_normalize_lane(row[lane_col]) is None:
-            raw_lane = "" if pd.isna(row[lane_col]) else str(row[lane_col]).strip()
-            unmapped_lanes[raw_lane or "<empty>"] = unmapped_lanes.get(raw_lane or "<empty>", 0) + 1
+        lane_value = row[lane_col]
+        if not is_blank(lane_value):
+            if try_normalize_lane(lane_value) is None:
+                raw_lane = str(lane_value).strip()
+                unmapped_lanes[raw_lane] = unmapped_lanes.get(raw_lane, 0) + 1
 
-        if try_normalize_mop(row[mop_col]) is None:
-            raw_mop = "" if pd.isna(row[mop_col]) else str(row[mop_col]).strip()
-            unmapped_mops[raw_mop or "<empty>"] = unmapped_mops.get(raw_mop or "<empty>", 0) + 1
+        mop_value = row[mop_col]
+        if not is_blank(mop_value):
+            if try_normalize_mop(mop_value) is None:
+                raw_mop = str(mop_value).strip()
+                unmapped_mops[raw_mop] = unmapped_mops.get(raw_mop, 0) + 1
 
     errors: list[str] = []
     if invalid_datetimes:
@@ -493,17 +660,22 @@ def print_validation_errors(errors: list[str]) -> None:
     print("=" * 80)
 
 
-def prepare_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+def prepare_dataframe(df: pd.DataFrame, datetime_format: str) -> pd.DataFrame:
     datetime_col = find_column(df, COLUMN_MAPPING["datetime"])
     vehicle_col = find_column(df, COLUMN_MAPPING["vehicle_class"])
     lane_col = find_column(df, COLUMN_MAPPING["lane_no"])
     mop_col = find_column(df, COLUMN_MAPPING["mop"])
 
     prepared = pd.DataFrame()
-    prepared["event_dt"] = df[datetime_col].map(parse_datetime)
-    prepared["vehicle_class"] = df[vehicle_col].map(normalize_vehicle_class)
-    prepared["lane_no"] = df[lane_col].map(normalize_lane)
-    prepared["mop"] = df[mop_col].map(normalize_mop)
+    prepared["event_dt"] = df[datetime_col].map(
+        lambda value: safe_parse_datetime(value, datetime_format)
+    )
+    prepared["vehicle_class"] = df[vehicle_col].map(optional_normalize_vehicle_class)
+    prepared["lane_no"] = df[lane_col].map(optional_normalize_lane)
+    prepared["mop"] = df[mop_col].map(optional_normalize_mop)
+
+    # Only rows with a valid, non-empty date are counted in totals and hourly buckets.
+    prepared = prepared[prepared["event_dt"].notna()].copy()
     prepared["hour"] = prepared["event_dt"].map(hour_bucket_label)
     prepared["date"] = prepared["event_dt"].dt.date
     return prepared
@@ -526,90 +698,118 @@ def aggregate_hourly_rows(df: pd.DataFrame) -> list[dict]:
             row[column_name] = int((group["lane_no"] == lane).sum())
 
         for mop_bucket, column_name in MOP_COLUMNS.items():
-            row[column_name] = int((group["mop"] == mop_bucket).sum())
+            row[column_name] = int(group["mop"].eq(mop_bucket).sum())
 
+        row[TOTAL_TRANSACTION_COLUMN] = len(group)
         rows.append(row)
 
     return rows
 
 
-def create_table_if_not_exists(conn, table_name: str) -> None:
-    count_columns = list(VEHICLE_CLASS_COLUMNS.values())
-    count_columns.extend(LANE_COLUMNS.values())
-    count_columns.extend(MOP_COLUMNS.values())
+def print_hourly_rows(rows: list[dict]) -> None:
+    """Print final aggregated rows that would be inserted into the DB."""
+    if not rows:
+        print("  No hourly rows prepared.")
+        return
 
-    column_defs = [
-        "id BIGSERIAL PRIMARY KEY",
-        "plaza_name TEXT NOT NULL",
-        "hour TEXT NOT NULL",
-        "date DATE NOT NULL",
-    ]
-    column_defs.extend(f"{column_name} INTEGER NOT NULL DEFAULT 0" for column_name in count_columns)
-    column_defs.append("UNIQUE (plaza_name, date, hour)")
+    print("\n  Prepared DB rows:")
+    print("  " + "-" * 76)
+    for index, row in enumerate(rows, start=1):
+        print(f"  Row {index}:")
+        for key, value in row.items():
+            print(f"    {key}: {value}")
+    print("  " + "-" * 76)
 
-    create_sql = sql.SQL(
-        "CREATE TABLE IF NOT EXISTS {table} ({columns});"
-    ).format(
-        table=sql.Identifier(table_name),
-        columns=sql.SQL(", ").join(sql.SQL(part) for part in column_defs),
-    )
+
+def fetch_existing_hour_keys(conn, table_name: str, rows: list[dict]) -> set[tuple]:
+    if not rows:
+        return set()
+
+    keys = [(row["plaza_name"], row["date"], row["hour"]) for row in rows]
+    query = sql.SQL(
+        "SELECT plaza_name, date, hour FROM {table} "
+        "WHERE (plaza_name, date, hour) IN %s"
+    ).format(table=sql.Identifier(table_name))
 
     with conn.cursor() as cursor:
-        cursor.execute(create_sql)
-    conn.commit()
+        cursor.execute(query.as_string(conn), (tuple(keys),))
+        return {(plaza_name, record_date, hour) for plaza_name, record_date, hour in cursor.fetchall()}
 
 
-def upsert_rows(conn, table_name: str, rows: list[dict]) -> int:
+def upsert_rows(conn, table_name: str, rows: list[dict]) -> tuple[int, int]:
     if not rows:
-        return 0
+        return 0, 0
 
-    data_columns = ["plaza_name", "hour", "date"]
+    data_columns = ["plaza_name", "hour", "date", TOTAL_TRANSACTION_COLUMN]
     data_columns.extend(VEHICLE_CLASS_COLUMNS.values())
     data_columns.extend(LANE_COLUMNS.values())
     data_columns.extend(MOP_COLUMNS.values())
 
-    update_columns = [
-        column
-        for column in data_columns
-        if column not in {"plaza_name", "hour", "date"}
-    ]
+    existing_keys = fetch_existing_hour_keys(conn, table_name, rows)
+    rows_to_insert: list[dict] = []
+    skipped = 0
+
+    for row in rows:
+        key = (row["plaza_name"], row["date"], row["hour"])
+        if key in existing_keys:
+            print(
+                f"  SKIP (exists): plaza={row['plaza_name']}, "
+                f"date={row['date']}, hour={row['hour']}"
+            )
+            skipped += 1
+        else:
+            rows_to_insert.append(row)
+
+    if not rows_to_insert:
+        return 0, skipped
 
     insert_sql = sql.SQL(
-        "INSERT INTO {table} ({fields}) VALUES %s "
-        "ON CONFLICT (plaza_name, date, hour) DO UPDATE SET {updates}"
+        "INSERT INTO {table} ({fields}) VALUES %s"
     ).format(
         table=sql.Identifier(table_name),
         fields=sql.SQL(", ").join(sql.Identifier(column) for column in data_columns),
-        updates=sql.SQL(", ").join(
-            sql.SQL("{column} = EXCLUDED.{column}").format(column=sql.Identifier(column))
-            for column in update_columns
-        ),
     )
 
     values = [
         tuple(row[column] for column in data_columns)
-        for row in rows
+        for row in rows_to_insert
     ]
 
     with conn.cursor() as cursor:
         execute_values(cursor, insert_sql.as_string(conn), values)
     conn.commit()
-    return len(rows)
+    return len(rows_to_insert), skipped
 
 
 def list_excel_files(folder_path: Path) -> list[Path]:
+    """Return Excel/CSV files under folder_path, including all subfolders."""
     return sorted(
         path
-        for path in folder_path.iterdir()
-        if path.is_file() and path.suffix.lower() in EXCEL_EXTENSIONS
+        for path in folder_path.rglob("*")
+        if path.is_file()
+        and path.suffix.lower() in EXCEL_EXTENSIONS
+        and not path.name.startswith("~$")
     )
 
 
-def process_file(conn, table_name: str, file_path: Path) -> int:
-    print(f"\nProcessing file: {file_path.name}")
+def process_file(
+    file_path: Path,
+    table_name: str,
+    conn=None,
+    dry_run: bool = False,
+    run_log: Path | None = None,
+) -> tuple[int, bool]:
+    print(f"\nProcessing file: {file_path}")
     try:
         df = read_excel_file(file_path)
     except ValueError as exc:
+        if is_header_detection_error(exc):
+            message = f"[SKIP] {file_path} — {exc}"
+            print(f"  {message}")
+            if run_log is not None:
+                append_run_log(run_log, message)
+            return 0, True
+
         print(f"\n  File preparation failed: {exc}")
         raise UnmappedValueError(
             f"File '{file_path.name}' could not be prepared. No rows were inserted."
@@ -617,23 +817,33 @@ def process_file(conn, table_name: str, file_path: Path) -> int:
 
     print(f"  Rows read after header detection and normalization: {len(df)}")
 
-    validation_errors = validate_dataframe(df, file_path.name)
+    datetime_col = find_column(df, COLUMN_MAPPING["datetime"])
+    datetime_format = detect_datetime_format(df[datetime_col].tolist())
+    print(f"  Detected datetime format: {datetime_format}")
+
+    validation_errors = validate_dataframe(df, file_path.name, datetime_format)
     if validation_errors:
         print_validation_errors(validation_errors)
         raise UnmappedValueError(
             f"File '{file_path.name}' failed validation. No rows were inserted."
         )
 
-    print("  Validation passed for entire file. Starting DB insertion...")
-    prepared = prepare_dataframe(df)
+    print("  Validation passed for entire file.")
+    prepared = prepare_dataframe(df, datetime_format)
     hourly_rows = aggregate_hourly_rows(prepared)
-    inserted = upsert_rows(conn, table_name, hourly_rows)
 
-    print(f"  Hourly rows upserted: {inserted}")
-    return inserted
+    if dry_run:
+        print("  DRY RUN — skipping DB insert.")
+        print_hourly_rows(hourly_rows)
+        return len(hourly_rows), False
+
+    print("  Starting DB insertion...")
+    inserted, skipped = upsert_rows(conn, table_name, hourly_rows)
+    print(f"  Hourly rows inserted: {inserted}, skipped (already exists): {skipped}")
+    return inserted, False
 
 
-def process_folder(folder_path: str) -> None:
+def process_folder(folder_path: str, dry_run: bool = DRY_RUN) -> None:
     folder = Path(folder_path)
     if not folder.is_dir():
         raise FileNotFoundError(f"Input folder not found: {folder_path}")
@@ -641,24 +851,83 @@ def process_folder(folder_path: str) -> None:
     table_name = get_analytics_table_name()
     files = list_excel_files(folder)
     if not files:
-        print(f"No Excel/CSV files found in: {folder}")
+        print(f"No Excel/CSV files found under: {folder} (including subfolders)")
         return
 
     print(f"Plaza: {PLAZA_NAME}")
+    print(f"Target database: {get_analytics_db_connection_kwargs()['database']}")
     print(f"Target table: {table_name}")
     print(f"Files found: {len(files)}")
 
-    conn = psycopg2.connect(**get_db_connection_kwargs())
-    try:
-        create_table_if_not_exists(conn, table_name)
-        total_rows = 0
+    run_log = create_run_log_file()
+    print(f"Run log: {run_log}")
+    append_run_log(
+        run_log,
+        f"Plaza: {PLAZA_NAME}\nInput folder: {folder}\nFiles found: {len(files)}",
+    )
+
+    if dry_run:
+        print("DRY RUN enabled — prepared rows will be printed only.")
+
+    total_rows = 0
+    skipped_files = 0
+    if dry_run:
         for file_path in files:
             try:
-                total_rows += process_file(conn, table_name, file_path)
+                rows, file_skipped = process_file(
+                    file_path,
+                    table_name,
+                    dry_run=True,
+                    run_log=run_log,
+                )
+                if file_skipped:
+                    skipped_files += 1
+                total_rows += rows
             except UnmappedValueError:
+                append_run_log(run_log, "Execution stopped due to validation failure.")
                 print("\nExecution stopped. Fix the abnormal values above and rerun.")
+                print(f"See log: {run_log}")
                 sys.exit(1)
-        print(f"\nCompleted. Total hourly rows upserted: {total_rows}")
+        append_run_log(
+            run_log,
+            f"\nDry run complete. Total hourly rows prepared: {total_rows}. "
+            f"Skipped files: {skipped_files}.",
+        )
+        print(f"\nDry run complete. Total hourly rows prepared: {total_rows}")
+        print(f"Skipped files: {skipped_files}. Log: {run_log}")
+        return
+
+    conn = psycopg2.connect(**get_analytics_db_connection_kwargs())
+    try:
+        count_columns = [TOTAL_TRANSACTION_COLUMN]
+        count_columns.extend(VEHICLE_CLASS_COLUMNS.values())
+        count_columns.extend(LANE_COLUMNS.values())
+        count_columns.extend(MOP_COLUMNS.values())
+        ensure_analytics_table(conn, table_name, count_columns)
+        for file_path in files:
+            try:
+                rows, file_skipped = process_file(
+                    file_path,
+                    table_name,
+                    conn=conn,
+                    dry_run=False,
+                    run_log=run_log,
+                )
+                if file_skipped:
+                    skipped_files += 1
+                total_rows += rows
+            except UnmappedValueError:
+                append_run_log(run_log, "Execution stopped due to validation failure.")
+                print("\nExecution stopped. Fix the abnormal values above and rerun.")
+                print(f"See log: {run_log}")
+                sys.exit(1)
+        append_run_log(
+            run_log,
+            f"\nCompleted. Total hourly rows inserted: {total_rows}. "
+            f"Skipped files: {skipped_files}.",
+        )
+        print(f"\nCompleted. Total hourly rows inserted: {total_rows}")
+        print(f"Skipped files: {skipped_files}. Log: {run_log}")
     finally:
         conn.close()
 
@@ -668,7 +937,7 @@ def main() -> None:
     if len(sys.argv) > 1:
         folder_path = sys.argv[1].strip().strip('"')
 
-    process_folder(folder_path)
+    process_folder(folder_path, dry_run=DRY_RUN)
 
 
 if __name__ == "__main__":

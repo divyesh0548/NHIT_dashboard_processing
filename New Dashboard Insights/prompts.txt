@@ -1,0 +1,1 @@
+On opening the website do not select the last date available in DB, but instead select the most earliest date available in DB.
