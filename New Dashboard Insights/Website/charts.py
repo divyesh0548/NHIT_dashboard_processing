@@ -141,6 +141,9 @@ def _disable_series_hovers(fig: go.Figure) -> None:
     for trace in fig.data:
         if not trace.name:
             continue
+        # Keep independent hover on <2s overlay diamonds.
+        if str(trace.name).endswith(" <2s"):
+            continue
         trace.hoverinfo = "skip"
         trace.hovertemplate = None
 
@@ -233,6 +236,7 @@ def line_series_chart(
     x_value_totals: dict[str, int] | None = None,
     x_tick_stride: int = 1,
     value_suffix: str = "",
+    lt2_overlay_df: pd.DataFrame | None = None,
 ) -> go.Figure:
     chart_height = CHART_HEIGHT_COMPARE if compact else None
     if long_df.empty:
@@ -281,7 +285,92 @@ def line_series_chart(
     if highlight_every_nth_day and categories:
         _apply_monthly_highlights(fig, categories, every_n=highlight_every_nth_day)
 
+    if lt2_overlay_df is not None and not lt2_overlay_df.empty:
+        _add_lt2_overlay_markers(fig, lt2_overlay_df, x_col, series_totals=series_totals)
+
     _apply_sorted_x_hover(fig, plot_df, x_col, categories, value_suffix=value_suffix)
+    return fig
+
+
+def _add_lt2_overlay_markers(
+    fig: go.Figure,
+    overlay_df: pd.DataFrame,
+    x_col: str,
+    *,
+    series_totals: dict[str, int] | None = None,
+) -> None:
+    """Sparse markers where <2s gaps occurred (y = avg gap at that point)."""
+    series_colors = _series_color_map(fig)
+    label_map = {}
+    if series_totals:
+        label_map = {
+            str(series): f"{series} ({total:,})"
+            for series, total in series_totals.items()
+        }
+
+    plot = overlay_df.copy()
+    plot[x_col] = plot[x_col].astype(str)
+    plot["series"] = plot["series"].astype(str)
+    plot["gap_lt_2s_count"] = pd.to_numeric(plot["gap_lt_2s_count"], errors="coerce").fillna(0)
+
+    for series_name, group in plot.groupby("series", sort=False):
+        legend_name = label_map.get(str(series_name), str(series_name))
+        color = series_colors.get(legend_name) or series_colors.get(str(series_name)) or "#c0392b"
+        sizes = [min(10 + int(count) * 2, 28) for count in group["gap_lt_2s_count"]]
+        fig.add_trace(
+            go.Scatter(
+                x=group[x_col].astype(str).tolist(),
+                y=group["count"].tolist(),
+                mode="markers",
+                name=f"{series_name} <2s",
+                marker=dict(
+                    size=sizes,
+                    color=color,
+                    symbol="diamond",
+                    line=dict(width=1.2, color="#111111"),
+                    opacity=0.9,
+                ),
+                customdata=group["gap_lt_2s_count"].tolist(),
+                hovertemplate=(
+                    f"<b>{series_name}</b><br>"
+                    "%{x}<br>"
+                    "Avg gap: %{y:.2f}s<br>"
+                    "&lt;2s gaps: %{customdata}<extra></extra>"
+                ),
+                showlegend=True,
+            )
+        )
+
+
+def gap_lt2_heatmap_chart(
+    matrix_df: pd.DataFrame,
+    title: str,
+    *,
+    x_axis_title: str = "Time",
+    compact: bool = False,
+) -> go.Figure:
+    chart_height = CHART_HEIGHT_COMPARE if compact else None
+    if matrix_df.empty:
+        fig = go.Figure()
+        fig.update_layout(**_base_layout(title, "Lane", show_legend=False, height=chart_height))
+        fig.add_annotation(text="No <2s gap flags for the selected filters", showarrow=False, y=0.5, x=0.5)
+        return fig
+
+    z_values = matrix_df.to_numpy(dtype=float)
+    fig = go.Figure(
+        data=go.Heatmap(
+            z=z_values,
+            x=[str(col) for col in matrix_df.columns],
+            y=[str(idx) for idx in matrix_df.index],
+            colorscale="YlOrRd",
+            colorbar=dict(title="<2s gaps"),
+            hovertemplate="Lane: %{y}<br>%{x}<br>&lt;2s gaps: %{z}<extra></extra>",
+            zmin=0,
+        )
+    )
+    fig.update_layout(**_base_layout(title, "Lane", show_legend=False, hovermode="closest", height=chart_height))
+    fig.update_xaxes(title=x_axis_title, type="category", fixedrange=True)
+    fig.update_yaxes(title="Lane", type="category", fixedrange=True, autorange="reversed")
     return fig
 
 

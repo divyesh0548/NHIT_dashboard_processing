@@ -24,8 +24,16 @@ EXEMPT_REQUIRED_FIELDS = ("datetime", "lane_no", "mop")
 TOTAL_TRANSACTION_COLUMN = "total_transaction"
 
 # Canonical lane -> (db_column, excel_aliases)
+# Supported lanes are L01…L{MAX_SUPPORTED_LANES}. Extend this map (and DB columns)
+# before processing plazas with more lanes.
+MAX_SUPPORTED_LANES = 12
 LANE_MAPPINGS: dict[str, tuple[str, list[str]]] = {
-    f"L{i:02d}": (f"l{i:02d}", [f"L{i:02d}"]) for i in range(1, 13)
+    f"L{i:02d}": (f"l{i:02d}", [f"L{i:02d}"]) for i in range(1, MAX_SUPPORTED_LANES + 1)
+}
+
+# Gap table: per-lane count of gaps strictly under 2 seconds.
+LANE_LT2_COLUMNS: dict[str, str] = {
+    f"L{i:02d}": f"l{i:02d}_lt2_count" for i in range(1, MAX_SUPPORTED_LANES + 1)
 }
 
 EXCEL_EXTENSIONS = {".xlsx", ".xls", ".csv"}

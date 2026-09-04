@@ -29,3 +29,4 @@ MAX_DAY_WINDOW = 50
 DEFAULT_TOP_LANES = 5
 CHART_HEIGHT = 760  # 30% taller than previous 585px layout height
 GAP_DISTRIBUTION_TABLE = "gap_distribution_per_lane"
+EXEMPT_DISTRIBUTION_TABLE = "exempt_distribution_per_lane"

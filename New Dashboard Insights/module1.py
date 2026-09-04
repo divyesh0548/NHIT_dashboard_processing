@@ -45,6 +45,7 @@ from excel_common import (
     hour_bucket_label,
     is_blank,
     is_header_detection_error,
+    lane_limit_error_message,
     list_excel_files,
     optional_normalize_lane,
     optional_normalize_mop,
@@ -55,6 +56,7 @@ from excel_common import (
     try_normalize_mop,
     try_normalize_vehicle_class,
     try_parse_datetime,
+    unsupported_high_lane_counts,
 )
 
 # If True, print prepared hourly rows only — no DB connection or inserts.
@@ -79,6 +81,7 @@ def validate_dataframe(
     unmapped_vehicle_classes: dict[str, int] = {}
     unmapped_lanes: dict[str, int] = {}
     unmapped_mops: dict[str, int] = {}
+    raw_lanes: list = []
 
     for _row_idx, row in df.iterrows():
         datetime_value = row[datetime_col]
@@ -95,6 +98,7 @@ def validate_dataframe(
 
         lane_value = row[lane_col]
         if not is_blank(lane_value):
+            raw_lanes.append(lane_value)
             if try_normalize_lane(lane_value) is None:
                 raw_lane = str(lane_value).strip()
                 unmapped_lanes[raw_lane] = unmapped_lanes.get(raw_lane, 0) + 1
@@ -116,11 +120,20 @@ def validate_dataframe(
             f"Unmapped vehicle class values in '{file_name}' ({vehicle_col}): "
             + ", ".join(f"{value!r} ({count} row(s))" for value, count in sorted(unmapped_vehicle_classes.items()))
         )
+    high_lanes = unsupported_high_lane_counts(raw_lanes)
+    if high_lanes:
+        errors.append(lane_limit_error_message(file_name, lane_col, high_lanes))
     if unmapped_lanes:
-        errors.append(
-            f"Unmapped lane values in '{file_name}' ({lane_col}): "
-            + ", ".join(f"{value!r} ({count} row(s))" for value, count in sorted(unmapped_lanes.items()))
-        )
+        remaining = {
+            value: count
+            for value, count in unmapped_lanes.items()
+            if value not in high_lanes
+        }
+        if remaining:
+            errors.append(
+                f"Unmapped lane values in '{file_name}' ({lane_col}): "
+                + ", ".join(f"{value!r} ({count} row(s))" for value, count in sorted(remaining.items()))
+            )
     if unmapped_mops:
         errors.append(
             f"Unmapped MOP values in '{file_name}' ({mop_col}): "

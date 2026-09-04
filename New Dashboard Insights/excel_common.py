@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import tempfile
 from datetime import datetime
@@ -20,6 +21,7 @@ from config.excel_config import (
     EXCEL_EXTENSIONS,
     HEADER_KEYWORDS,
     LANE_LOOKUP,
+    MAX_SUPPORTED_LANES,
     normalize_key,
     required_excel_columns,
 )
@@ -175,6 +177,47 @@ def try_normalize_lane(value):
     if not key:
         return None
     return LANE_LOOKUP.get(key)
+
+
+def extract_lane_number(value) -> int | None:
+    """Best-effort numeric lane index from raw labels like L14 / Lane 14."""
+    key = normalize_key(value)
+    if not key:
+        return None
+    match = re.search(r"(\d+)", key)
+    if not match:
+        return None
+    return int(match.group(1))
+
+
+def unsupported_high_lane_counts(raw_lane_values: list) -> dict[str, int]:
+    """
+    Labels that appear to be lane numbers above MAX_SUPPORTED_LANES.
+    Used to stop ETL so new lane columns can be added deliberately.
+    """
+    found: dict[str, int] = {}
+    for value in raw_lane_values:
+        if is_blank(value):
+            continue
+        if try_normalize_lane(value) is not None:
+            continue
+        lane_number = extract_lane_number(value)
+        if lane_number is None or lane_number <= MAX_SUPPORTED_LANES:
+            continue
+        raw = str(value).strip()
+        found[raw] = found.get(raw, 0) + 1
+    return found
+
+
+def lane_limit_error_message(file_name: str, lane_col: str, high_lane_counts: dict[str, int]) -> str:
+    details = ", ".join(
+        f"{label!r} ({count} row(s))" for label, count in sorted(high_lane_counts.items())
+    )
+    return (
+        f"Plaza has lane(s) beyond supported L01–L{MAX_SUPPORTED_LANES:02d} "
+        f"in '{file_name}' ({lane_col}): {details}. "
+        f"Add mappings/columns for the new lanes in config (LANE_MAPPINGS / DB), then rerun."
+    )
 
 
 def try_normalize_mop(value):

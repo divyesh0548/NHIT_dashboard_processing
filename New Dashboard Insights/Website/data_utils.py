@@ -316,13 +316,38 @@ def total_volume(df: pd.DataFrame) -> int:
     if "total_transaction" in df.columns:
         return int(df["total_transaction"].sum())
     class_cols = [col for col in VEHICLE_CLASSES.values() if col in df.columns]
-    if not class_cols:
-        return 0
-    return int(df[class_cols].sum().sum())
+    if class_cols:
+        return int(df[class_cols].sum().sum())
+    lane_cols = [col for col in LANES.values() if col in df.columns]
+    if lane_cols:
+        return int(df[lane_cols].sum().sum())
+    mop_cols = [col for col in MOP_TYPES.values() if col in df.columns]
+    if mop_cols:
+        return int(df[mop_cols].sum().sum())
+    return 0
 
 
 def format_total_kpi(df: pd.DataFrame) -> str:
     return f"{total_volume(df):,}"
+
+
+def metric_share_pct_df(chart_df: pd.DataFrame, column_map: dict[str, str]) -> pd.DataFrame:
+    """Replace category columns with % of that row's category total (hour/day share)."""
+    if chart_df.empty:
+        return chart_df
+
+    out = chart_df.copy()
+    cols = [col for col in column_map.values() if col in out.columns]
+    if not cols:
+        return out
+
+    for col in cols:
+        out[col] = pd.to_numeric(out[col], errors="coerce").fillna(0.0)
+    row_total = out[cols].sum(axis=1)
+    safe_total = row_total.replace(0, pd.NA)
+    for col in cols:
+        out[col] = (out[col] / safe_total * 100.0).fillna(0.0)
+    return out
 
 
 def _weighted_mean(values: pd.Series, weights: pd.Series) -> float | None:
@@ -367,9 +392,13 @@ def filter_gap_df(df: pd.DataFrame, params: dict) -> pd.DataFrame:
 def _aggregate_gap_group(group: pd.DataFrame) -> dict:
     gap_count = int(pd.to_numeric(group["gap_count"], errors="coerce").fillna(0).sum())
     vehicle_count = int(pd.to_numeric(group["vehicle_count"], errors="coerce").fillna(0).sum())
+    lt2_count = 0
+    if "gap_lt_2s_count" in group.columns:
+        lt2_count = int(pd.to_numeric(group["gap_lt_2s_count"], errors="coerce").fillna(0).sum())
     return {
         "vehicle_count": vehicle_count,
         "gap_count": gap_count,
+        "gap_lt_2s_count": lt2_count,
         "avg_gap_sec": _weighted_mean(group["avg_gap_sec"], group["gap_count"]),
         "median_gap_sec": _weighted_mean(group["median_gap_sec"], group["gap_count"]),
         "p10_gap_sec": _weighted_mean(group["p10_gap_sec"], group["gap_count"]),
@@ -380,6 +409,22 @@ def _aggregate_gap_group(group: pd.DataFrame) -> dict:
         "max_gap_sec": float(pd.to_numeric(group["max_gap_sec"], errors="coerce").max())
         if group["max_gap_sec"].notna().any()
         else None,
+    }
+
+
+def _empty_gap_lane_row(x_col: str, x_value: str, lane: str) -> dict:
+    return {
+        x_col: x_value,
+        "lane_no": lane,
+        "vehicle_count": 0,
+        "gap_count": 0,
+        "gap_lt_2s_count": 0,
+        "avg_gap_sec": None,
+        "median_gap_sec": None,
+        "p10_gap_sec": None,
+        "p90_gap_sec": None,
+        "min_gap_sec": None,
+        "max_gap_sec": None,
     }
 
 
@@ -442,20 +487,7 @@ def build_gap_time_series(
             label = format_short_date_label(record_date)
             if day_subset.empty:
                 for lane in lanes:
-                    rows.append(
-                        {
-                            "date": label,
-                            "lane_no": lane,
-                            "vehicle_count": 0,
-                            "gap_count": 0,
-                            "avg_gap_sec": None,
-                            "median_gap_sec": None,
-                            "p10_gap_sec": None,
-                            "p90_gap_sec": None,
-                            "min_gap_sec": None,
-                            "max_gap_sec": None,
-                        }
-                    )
+                    rows.append(_empty_gap_lane_row("date", label, lane))
                 continue
             for lane_no, group in day_subset.groupby("lane_no", sort=True):
                 rows.append(
@@ -481,20 +513,7 @@ def build_gap_time_series(
         label = format_short_date_label(record_date)
         if day_subset.empty:
             for lane in lanes:
-                rows.append(
-                    {
-                        "date": label,
-                        "lane_no": lane,
-                        "vehicle_count": 0,
-                        "gap_count": 0,
-                        "avg_gap_sec": None,
-                        "median_gap_sec": None,
-                        "p10_gap_sec": None,
-                        "p90_gap_sec": None,
-                        "min_gap_sec": None,
-                        "max_gap_sec": None,
-                    }
-                )
+                rows.append(_empty_gap_lane_row("date", label, lane))
             continue
         for lane_no, group in day_subset.groupby("lane_no", sort=True):
             rows.append(
@@ -624,3 +643,104 @@ def top_gap_lanes_by_volume(chart_df: pd.DataFrame, top_n: int = DEFAULT_TOP_LAN
     totals = gap_lane_vehicle_totals(chart_df)
     ranked = sorted(totals.items(), key=lambda item: item[1], reverse=True)
     return [lane for lane, count in ranked[:top_n] if count > 0]
+
+
+def gap_lt2_overlay_long_df(
+    chart_df: pd.DataFrame,
+    x_col: str,
+    selected_lanes: list[str] | None = None,
+) -> pd.DataFrame:
+    """Points with gap_lt_2s_count > 0 for overlay markers (y = avg gap)."""
+    columns = [x_col, "series", "count", "gap_lt_2s_count"]
+    if chart_df.empty or "gap_lt_2s_count" not in chart_df.columns:
+        return pd.DataFrame(columns=columns)
+
+    out = chart_df.copy()
+    if selected_lanes is not None:
+        out = out[out["lane_no"].astype(str).isin([str(lane) for lane in selected_lanes])]
+    out["gap_lt_2s_count"] = pd.to_numeric(out["gap_lt_2s_count"], errors="coerce").fillna(0)
+    out = out[(out["gap_lt_2s_count"] > 0) & out["avg_gap_sec"].notna()].copy()
+    if out.empty:
+        return pd.DataFrame(columns=columns)
+
+    out = out.rename(columns={"lane_no": "series", "avg_gap_sec": "count"})
+    out[x_col] = out[x_col].astype(str)
+    out["series"] = out["series"].astype(str)
+    return out[columns].sort_values([x_col, "series"])
+
+
+def gap_lt2_flag_table(
+    chart_df: pd.DataFrame,
+    x_col: str,
+    selected_lanes: list[str] | None = None,
+) -> pd.DataFrame:
+    """Exception list: only lane×time buckets with at least one <2s gap."""
+    empty = pd.DataFrame(columns=["Time", "Lane", "<2s gaps", "Avg gap (s)"])
+    if chart_df.empty or "gap_lt_2s_count" not in chart_df.columns:
+        return empty
+
+    out = chart_df.copy()
+    if selected_lanes is not None:
+        out = out[out["lane_no"].astype(str).isin([str(lane) for lane in selected_lanes])]
+    out["gap_lt_2s_count"] = pd.to_numeric(out["gap_lt_2s_count"], errors="coerce").fillna(0).astype(int)
+    out = out[out["gap_lt_2s_count"] > 0].copy()
+    if out.empty:
+        return empty
+
+    out["_lane_rank"] = out["lane_no"].map(lambda lane: list(LANES).index(lane) if lane in LANES else 999)
+    out = out.sort_values(["gap_lt_2s_count", x_col, "_lane_rank"], ascending=[False, True, True])
+    return pd.DataFrame(
+        {
+            "Time": out[x_col].astype(str),
+            "Lane": out["lane_no"].astype(str),
+            "<2s gaps": out["gap_lt_2s_count"],
+            "Avg gap (s)": out["avg_gap_sec"].map(
+                lambda value: f"{value:.2f}" if pd.notna(value) else "—"
+            ),
+        }
+    ).reset_index(drop=True)
+
+
+def gap_lt2_heatmap_matrix(
+    chart_df: pd.DataFrame,
+    x_col: str,
+    x_order: list | None,
+    selected_lanes: list[str] | None = None,
+) -> tuple[pd.DataFrame, list[str], list[str]]:
+    """
+    Build lane × time matrix of <2s gap counts.
+    Returns (matrix_df indexed by lane, lane_order, x_order_used).
+    """
+    if chart_df.empty:
+        return pd.DataFrame(), [], []
+
+    out = chart_df.copy()
+    if selected_lanes is not None:
+        out = out[out["lane_no"].astype(str).isin([str(lane) for lane in selected_lanes])]
+    if out.empty:
+        return pd.DataFrame(), [], []
+
+    if "gap_lt_2s_count" not in out.columns:
+        out["gap_lt_2s_count"] = 0
+    out["gap_lt_2s_count"] = pd.to_numeric(out["gap_lt_2s_count"], errors="coerce").fillna(0)
+    out[x_col] = out[x_col].astype(str)
+    out["lane_no"] = out["lane_no"].astype(str)
+
+    categories = [str(value) for value in x_order] if x_order else sorted(out[x_col].unique().tolist())
+    lane_order = [lane for lane in LANES if lane in set(out["lane_no"])]
+    if not lane_order:
+        lane_order = sorted(out["lane_no"].unique().tolist())
+
+    pivot = out.pivot_table(
+        index="lane_no",
+        columns=x_col,
+        values="gap_lt_2s_count",
+        aggfunc="sum",
+        fill_value=0,
+        observed=False,
+    )
+    for category in categories:
+        if category not in pivot.columns:
+            pivot[category] = 0
+    pivot = pivot.reindex(index=lane_order, columns=categories, fill_value=0)
+    return pivot, lane_order, categories

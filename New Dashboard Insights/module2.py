@@ -1,8 +1,9 @@
 """
-Updates "gap_distribution_per_lane" with hourly avg gap (headway) per lane.
+Updates "gap_distribution_per_lane" with hourly avg gap and <2s counts per lane.
 
-One row per (plaza, date, hour); columns l01…l12 hold average gap seconds for that lane.
-Also stores hour-level gap_lt_2s_count / gap_lt_2s_pct (gaps under 2 seconds).
+One row per (plaza, date, hour):
+  - l01…l12 = average gap seconds for that lane
+  - l01_lt2_count…l12_lt2_count = gaps under 2 seconds for that lane
 """
 
 from __future__ import annotations
@@ -25,7 +26,12 @@ from config.db import (
     ensure_gap_distribution_table,
     get_analytics_db_connection_kwargs,
 )
-from config.excel_config import COLUMN_MAPPING, GAP_REQUIRED_FIELDS, LANE_COLUMNS
+from config.excel_config import (
+    COLUMN_MAPPING,
+    GAP_REQUIRED_FIELDS,
+    LANE_COLUMNS,
+    LANE_LT2_COLUMNS,
+)
 from config.settings import (
     GAP_DISTRIBUTION_TABLE,
     INPUT_FOLDER,
@@ -42,12 +48,14 @@ from excel_common import (
     hour_bucket_label,
     is_blank,
     is_header_detection_error,
+    lane_limit_error_message,
     list_excel_files,
     optional_normalize_lane,
     read_excel_file,
     safe_parse_datetime,
     try_normalize_lane,
     try_parse_datetime,
+    unsupported_high_lane_counts,
 )
 
 DRY_RUN = False
@@ -60,8 +68,7 @@ DATA_COLUMNS = [
     "date",
     "hour",
     *LANE_COLUMNS.values(),
-    "gap_lt_2s_count",
-    "gap_lt_2s_pct",
+    *LANE_LT2_COLUMNS.values(),
 ]
 
 
@@ -81,6 +88,7 @@ def validate_dataframe(
 
     invalid_datetimes: dict[str, int] = {}
     unmapped_lanes: dict[str, int] = {}
+    raw_lanes: list = []
 
     for _row_idx, row in df.iterrows():
         datetime_value = row[datetime_col]
@@ -91,6 +99,7 @@ def validate_dataframe(
 
         lane_value = row[lane_col]
         if not is_blank(lane_value):
+            raw_lanes.append(lane_value)
             if try_normalize_lane(lane_value) is None:
                 raw_lane = str(lane_value).strip()
                 unmapped_lanes[raw_lane] = unmapped_lanes.get(raw_lane, 0) + 1
@@ -101,11 +110,22 @@ def validate_dataframe(
             f"Invalid datetime values in '{file_name}' ({datetime_col}): "
             + ", ".join(f"{value!r} ({count} row(s))" for value, count in sorted(invalid_datetimes.items()))
         )
+
+    high_lanes = unsupported_high_lane_counts(raw_lanes)
+    if high_lanes:
+        errors.append(lane_limit_error_message(file_name, lane_col, high_lanes))
+
     if unmapped_lanes:
-        errors.append(
-            f"Unmapped lane values in '{file_name}' ({lane_col}): "
-            + ", ".join(f"{value!r} ({count} row(s))" for value, count in sorted(unmapped_lanes.items()))
-        )
+        remaining = {
+            value: count
+            for value, count in unmapped_lanes.items()
+            if value not in high_lanes
+        }
+        if remaining:
+            errors.append(
+                f"Unmapped lane values in '{file_name}' ({lane_col}): "
+                + ", ".join(f"{value!r} ({count} row(s))" for value, count in sorted(remaining.items()))
+            )
     return errors
 
 
@@ -135,7 +155,7 @@ def prepare_dataframe(df: pd.DataFrame, datetime_format: str) -> pd.DataFrame:
 
 
 def aggregate_hourly_gap_rows(df: pd.DataFrame) -> list[dict]:
-    """One row per plaza + date + hour with avg gap in l01…l12 and <2s flags."""
+    """One row per plaza + date + hour with per-lane avg gap and <2s counts."""
     if df.empty:
         return []
 
@@ -144,11 +164,7 @@ def aggregate_hourly_gap_rows(df: pd.DataFrame) -> list[dict]:
     ordered["gap_sec"] = (ordered["event_dt"] - ordered["prev_dt"]).dt.total_seconds()
     ordered.loc[ordered["gap_sec"] < 0, "gap_sec"] = np.nan
 
-    hour_keys = (
-        ordered.groupby(["date", "hour"], sort=True)
-        .size()
-        .index
-    )
+    hour_keys = ordered.groupby(["date", "hour"], sort=True).size().index
     gap_lookup = {
         key: group.to_numpy(dtype=float, copy=False)
         for key, group in ordered.dropna(subset=["gap_sec"]).groupby(
@@ -163,22 +179,16 @@ def aggregate_hourly_gap_rows(df: pd.DataFrame) -> list[dict]:
             "date": record_date,
             "hour": hour_label,
         }
-        hour_gaps: list[float] = []
-        for lane, column_name in LANE_COLUMNS.items():
+        for lane, avg_column in LANE_COLUMNS.items():
             gap_values = gap_lookup.get(
                 (record_date, hour_label, lane),
                 np.array([], dtype=float),
             )
-            row[column_name] = average_or_none(gap_values)
-            if gap_values.size:
-                hour_gaps.extend(float(value) for value in gap_values)
-
-        lt2_count = sum(1 for value in hour_gaps if value < GAP_LT_2S_THRESHOLD)
-        total_gaps = len(hour_gaps)
-        row["gap_lt_2s_count"] = int(lt2_count)
-        row["gap_lt_2s_pct"] = (
-            float(lt2_count / total_gaps * 100.0) if total_gaps else 0.0
-        )
+            row[avg_column] = average_or_none(gap_values)
+            lt2_column = LANE_LT2_COLUMNS[lane]
+            row[lt2_column] = int(
+                sum(1 for value in gap_values if float(value) < GAP_LT_2S_THRESHOLD)
+            )
         rows.append(row)
 
     return rows
@@ -360,7 +370,12 @@ def process_folder(folder_path: str, dry_run: bool = DRY_RUN) -> None:
 
     conn = psycopg2.connect(**get_analytics_db_connection_kwargs())
     try:
-        ensure_gap_distribution_table(conn, table_name, list(LANE_COLUMNS.values()))
+        ensure_gap_distribution_table(
+            conn,
+            table_name,
+            list(LANE_COLUMNS.values()),
+            list(LANE_LT2_COLUMNS.values()),
+        )
         for file_path in files:
             try:
                 rows, file_skipped = process_file(

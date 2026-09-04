@@ -36,17 +36,20 @@ from data_utils import (
     gap_avg_long_df,
     gap_lane_avg_table,
     gap_lane_vehicle_totals,
+    gap_lt2_flag_table,
+    gap_lt2_overlay_long_df,
     hour_labels_from_range,
     hour_sort_key,
     melt_metric_columns,
     melt_time_buckets_by_category,
+    metric_share_pct_df,
     series_order_by_total,
     series_order_from_labels,
     top_gap_lanes_by_volume,
     top_lanes_by_volume,
     weighted_avg_gap_kpi,
 )
-from db import fetch_analytics, fetch_gap_distribution, fetch_plaza_names
+from db import fetch_analytics, fetch_exempt_distribution, fetch_gap_distribution, fetch_plaza_names
 
 st.set_page_config(
     page_title="NHIT Analytics",
@@ -60,7 +63,8 @@ VIEW_VOLUME = "Vehicle class & Lane distribution"
 VIEW_CLASS_MIX = "Class Mix"
 VIEW_MOP = "MOP Distribution"
 VIEW_GAP = "Gap Distribution"
-DASHBOARD_VIEWS = (VIEW_VOLUME, VIEW_CLASS_MIX, VIEW_MOP, VIEW_GAP)
+VIEW_EXEMPT = "Exempt Distribution"
+DASHBOARD_VIEWS = (VIEW_VOLUME, VIEW_CLASS_MIX, VIEW_MOP, VIEW_GAP, VIEW_EXEMPT)
 
 AXIS_CONFIG = {
     "Hours": {"x_axis_title": "Hour", "hover_bucket_label": "Hour"},
@@ -128,21 +132,29 @@ def apply_compact_control_styles() -> None:
             padding-bottom: 0.8rem;
         }}
         div[class*="lane_chart_controls"],
-        div[class*="gap_lane_controls"] {{
+        div[class*="gap_lane_controls"],
+        div[class*="mop_chart_controls"],
+        div[class*="exempt_lane_controls"] {{
             width: 100% !important;
             max-width: 100% !important;
         }}
-        div[class*="lane_chart_controls"] div[data-testid="stHorizontalBlock"] {{
+        div[class*="lane_chart_controls"] div[data-testid="stHorizontalBlock"],
+        div[class*="gap_lane_controls"] div[data-testid="stHorizontalBlock"],
+        div[class*="mop_chart_controls"] div[data-testid="stHorizontalBlock"],
+        div[class*="exempt_lane_controls"] div[data-testid="stHorizontalBlock"] {{
             width: fit-content !important;
             max-width: 100% !important;
-            align-items: flex-end !important;
-            column-gap: clamp(0.85rem, 2vw, 1.5rem) !important;
+            align-items: center !important;
+            column-gap: clamp(1rem, 2.5vw, 2rem) !important;
             flex-wrap: nowrap !important;
         }}
-        div[class*="lane_chart_controls"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {{
-            flex: 0 1 auto !important;
+        div[class*="lane_chart_controls"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"],
+        div[class*="gap_lane_controls"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"],
+        div[class*="mop_chart_controls"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"],
+        div[class*="exempt_lane_controls"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {{
+            flex: 0 0 auto !important;
             width: auto !important;
-            min-width: 0 !important;
+            min-width: max-content !important;
             padding: 0 !important;
         }}
         div[class*="lane_chart_controls"] div[data-testid="stSelectbox"] > div {{
@@ -162,8 +174,13 @@ def apply_compact_control_styles() -> None:
         div[class*="lane_chart_controls"] div[data-testid="stCheckbox"],
         div[class*="lane_chart_controls"] div[data-testid="stToggle"],
         div[class*="gap_lane_controls"] div[data-testid="stCheckbox"],
-        div[class*="gap_lane_controls"] div[data-testid="stToggle"] {{
+        div[class*="gap_lane_controls"] div[data-testid="stToggle"],
+        div[class*="mop_chart_controls"] div[data-testid="stCheckbox"],
+        div[class*="mop_chart_controls"] div[data-testid="stToggle"],
+        div[class*="exempt_lane_controls"] div[data-testid="stCheckbox"],
+        div[class*="exempt_lane_controls"] div[data-testid="stToggle"] {{
             min-width: max-content !important;
+            margin-bottom: 0 !important;
         }}
         div[class*="_time_controls"] {{
             border-bottom: 1px solid rgba(128, 128, 128, 0.35);
@@ -206,6 +223,40 @@ def apply_compact_control_styles() -> None:
         }}
         div[data-testid="stWidgetLabel"] {{
             margin-bottom: 0.2rem;
+        }}
+        /* Native toggle/checkbox: keep switch and text on one baseline. */
+        div[data-testid="stToggle"] [data-testid="stWidgetLabel"],
+        div[data-testid="stCheckbox"] [data-testid="stWidgetLabel"] {{
+            margin: 0 !important;
+            padding: 0 !important;
+        }}
+        div[data-testid="stToggle"] label,
+        div[data-testid="stCheckbox"] label {{
+            align-items: center !important;
+            gap: 0.5rem !important;
+            margin-bottom: 0 !important;
+        }}
+        div[data-testid="stToggle"] [data-testid="stWidgetLabel"] p,
+        div[data-testid="stCheckbox"] [data-testid="stWidgetLabel"] p {{
+            margin: 0 !important;
+            line-height: 1.25 !important;
+            padding-top: 0 !important;
+        }}
+        div[data-testid="stToggle"] [data-testid="stTooltipHoverTarget"],
+        div[data-testid="stCheckbox"] [data-testid="stTooltipHoverTarget"],
+        div[data-testid="stToggle"] [data-testid="stTooltipIcon"],
+        div[data-testid="stCheckbox"] [data-testid="stTooltipIcon"] {{
+            display: inline-flex !important;
+            align-items: center !important;
+            vertical-align: middle !important;
+        }}
+        div[class*="lane_chart_controls"] [data-testid="stElementContainer"]:has([data-testid="stToggle"]),
+        div[class*="gap_lane_controls"] [data-testid="stElementContainer"]:has([data-testid="stToggle"]),
+        div[class*="mop_chart_controls"] [data-testid="stElementContainer"]:has([data-testid="stToggle"]),
+        div[class*="exempt_lane_controls"] [data-testid="stElementContainer"]:has([data-testid="stToggle"]),
+        div[class*="_time_controls"] [data-testid="stElementContainer"]:has([data-testid="stToggle"]) {{
+            margin-bottom: 0 !important;
+            align-items: center !important;
         }}
         div[data-testid="stWidgetLabel"] label {{
             font-weight: 600;
@@ -266,6 +317,7 @@ SECTION_KEY_TO_VIEW = {
     "class_mix": VIEW_CLASS_MIX,
     "mop": VIEW_MOP,
     "gap": VIEW_GAP,
+    "exempt": VIEW_EXEMPT,
 }
 
 def mark_dashboard_view(view: str) -> None:
@@ -343,7 +395,7 @@ def build_params_from_session(section_key: str, dates: list[date]) -> dict | Non
 
     mode = st.session_state[mode_key]
     params: dict = {"mode": mode}
-    flexible_hours = section_key in {"volume", "gap"}
+    flexible_hours = section_key in {"volume", "gap", "exempt"}
 
     if mode == "Hours":
         date_key = f"{section_key}_hour_date"
@@ -410,7 +462,7 @@ def resolve_active_dashboard_view() -> str:
 
 
 def compute_section_kpi(df: pd.DataFrame, view: str) -> tuple[str, str] | None:
-    if df.empty and view != VIEW_GAP:
+    if df.empty and view not in {VIEW_GAP, VIEW_EXEMPT}:
         return None
 
     section_key = {
@@ -418,6 +470,7 @@ def compute_section_kpi(df: pd.DataFrame, view: str) -> tuple[str, str] | None:
         VIEW_CLASS_MIX: "class_mix",
         VIEW_MOP: "mop",
         VIEW_GAP: "gap",
+        VIEW_EXEMPT: "exempt",
     }.get(view)
     if not section_key:
         return None
@@ -434,6 +487,19 @@ def compute_section_kpi(df: pd.DataFrame, view: str) -> tuple[str, str] | None:
             return ("Avg gap", "—")
         chart_df, _, _, _, _ = build_gap_time_series(gap_df, params)
         return ("Avg gap", weighted_avg_gap_kpi(chart_df))
+
+    if view == VIEW_EXEMPT:
+        exempt_df = st.session_state.get("exempt_df", pd.DataFrame())
+        if exempt_df is None or exempt_df.empty:
+            return ("Exempt vehicles", "—")
+        dates = available_dates(exempt_df)
+        if not dates:
+            return ("Exempt vehicles", "—")
+        params = build_params_from_session(section_key, dates)
+        if not params:
+            return ("Exempt vehicles", "—")
+        chart_df, _, _, _, _ = build_time_series_df(exempt_df, params)
+        return ("Exempt vehicles", format_total_kpi(chart_df))
 
     if df.empty:
         return None
@@ -460,7 +526,7 @@ def render_dashboard_title() -> st.delta_generator.DeltaGenerator:
     with title_col:
         st.title("NHIT Toll Analytics Dashboard")
         st.caption(
-            "Traffic volume, vehicle class mix, mode-of-payment, and lane gap (headway) trends."
+            "Traffic volume, vehicle class mix, mode-of-payment, lane gap, and exempt trends."
         )
     return total_col.empty()
 
@@ -717,18 +783,29 @@ def build_line_chart_figure(
     y_title: str = "Vehicle count",
     compact: bool = False,
     value_suffix: str = "",
+    as_percent: bool = False,
 ):
+    # Keep legend order from absolute counts when drawing % share lines.
+    effective_legend_mode = legend_mode
+    effective_fixed_order = fixed_legend_order
+    if as_percent and legend_mode == "total" and not categories_on_x_axis:
+        abs_long = melt_metric_columns(chart_df, x_col, column_map, x_order)
+        effective_fixed_order = series_order_by_total(abs_long)
+        effective_legend_mode = "fixed"
+
+    plot_df = metric_share_pct_df(chart_df, column_map) if as_percent else chart_df
     long_df, plot_x_col, plot_x_order, series_order = build_volume_chart_data(
-        chart_df,
+        plot_df,
         column_map,
         categories_on_x_axis=categories_on_x_axis,
         time_mode=time_mode,
         params=params,
         x_col=x_col,
         x_order=x_order,
-        legend_mode=legend_mode,
-        fixed_legend_order=fixed_legend_order,
+        legend_mode=effective_legend_mode,
+        fixed_legend_order=effective_fixed_order,
     )
+    # Legend totals stay absolute counts even when the line is drawn as %.
     totals = category_totals(chart_df, column_map)
     series_totals = totals
     x_value_totals = None
@@ -790,6 +867,8 @@ def render_comparable_line_chart(
     y_title: str = "Vehicle count",
     total_label: str = "Total vehicles",
     selected_categories: list[str] | None = None,
+    as_percent: bool = False,
+    value_suffix: str = "",
 ) -> list[str]:
     category_options = list(fixed_legend_order or column_map.keys())
     if selected_categories is None:
@@ -819,6 +898,8 @@ def render_comparable_line_chart(
                 period_label=primary_label,
                 y_title=y_title,
                 compact=False,
+                as_percent=as_percent,
+                value_suffix=value_suffix,
             ),
         )
         return selected_categories
@@ -848,6 +929,8 @@ def render_comparable_line_chart(
                 period_label=primary_label,
                 y_title=y_title,
                 compact=True,
+                as_percent=as_percent,
+                value_suffix=value_suffix,
             ),
         )
 
@@ -877,6 +960,8 @@ def render_comparable_line_chart(
                 period_label=compare_label,
                 y_title=y_title,
                 compact=True,
+                as_percent=as_percent,
+                value_suffix=value_suffix,
             ),
         )
 
@@ -910,13 +995,14 @@ def volume_x_axis_title(chart_kind: str, time_mode: str, x_axis_dim: str) -> str
     return chart_axis_config(time_mode)["x_axis_title"]
 
 
-def mop_chart_title(time_mode: str) -> str:
+def mop_chart_title(time_mode: str, *, as_percent: bool = False) -> str:
     x_label_by_mode = {
         "Hours": "hours",
         "Day on day": "day on day",
         "Month": "month",
     }
-    return f"MOP count by {x_label_by_mode.get(time_mode, 'time')}"
+    metric = "MOP share (%)" if as_percent else "MOP count"
+    return f"{metric} by {x_label_by_mode.get(time_mode, 'time')}"
 
 
 def render_mop_share_table(chart_df: pd.DataFrame, *, caption: str | None = None) -> None:
@@ -935,6 +1021,11 @@ def load_data(plaza_name: str) -> pd.DataFrame:
 @st.cache_data(ttl=300)
 def load_gap_data(plaza_name: str) -> pd.DataFrame:
     return fetch_gap_distribution(plaza_name=plaza_name)
+
+
+@st.cache_data(ttl=300)
+def load_exempt_data(plaza_name: str) -> pd.DataFrame:
+    return fetch_exempt_distribution(plaza_name=plaza_name)
 
 
 def available_dates(df: pd.DataFrame) -> list[date]:
@@ -1485,6 +1576,16 @@ def render_mop_section(df: pd.DataFrame) -> tuple[str, str] | None:
     section_kpi = ("Total transactions", format_total_kpi(chart_df))
 
     render_chart_section_header("FASTag / Cash / Exempt over time")
+    with st.container(key="mop_chart_controls"):
+        show_pct_share = st.toggle(
+            "Show as % share",
+            value=False,
+            key="mop_show_pct_share",
+            on_change=mark_dashboard_view_for_section,
+            args=("mop",),
+            help="Each hour/day shows MOP category share of that bucket's total transactions.",
+        )
+
     render_comparable_line_chart(
         "mop",
         df,
@@ -1498,13 +1599,15 @@ def render_mop_section(df: pd.DataFrame) -> tuple[str, str] | None:
         categories_on_x_axis=False,
         legend_mode="total",
         fixed_legend_order=None,
-        title=mop_chart_title(time_mode),
+        title=mop_chart_title(time_mode, as_percent=show_pct_share),
         x_axis_title=axis["x_axis_title"],
         hover_bucket_label=axis["hover_bucket_label"],
         compare_enabled=compare_enabled,
         comparison_params=comparison_params,
-        y_title="Transaction count",
+        y_title="Share (%)" if show_pct_share else "Transaction count",
         total_label="Total transactions",
+        as_percent=show_pct_share,
+        value_suffix="%" if show_pct_share else "",
     )
 
     if not compare_enabled:
@@ -1516,6 +1619,101 @@ def render_mop_section(df: pd.DataFrame) -> tuple[str, str] | None:
             render_mop_share_table(chart_df, caption="Primary — category share")
         with right_col:
             render_mop_share_table(compare_chart_df, caption="Comparison — category share")
+
+    return section_kpi
+
+
+def exempt_chart_title(time_mode: str, x_axis_dim: str) -> str:
+    if x_axis_dim == "Lanes":
+        return "Exempt count by lanes"
+    x_label_by_mode = {
+        "Hours": "hours",
+        "Day on day": "day on day",
+        "Month": "month",
+    }
+    return f"Exempt count by {x_label_by_mode.get(time_mode, 'time')}"
+
+
+def render_exempt_section(exempt_df: pd.DataFrame) -> tuple[str, str] | None:
+    dates = available_dates(exempt_df)
+    if not dates:
+        st.warning("No exempt distribution data for the selected plaza. Run module3.py first.")
+        return ("Exempt vehicles", "—")
+
+    params, comparison_params, compare_enabled, primary_valid, comparison_valid = render_shared_time_controls(
+        "exempt",
+        dates,
+        flexible_hour_window=True,
+        allow_compare=True,
+    )
+    if not primary_valid or (compare_enabled and not comparison_valid):
+        return None
+
+    chart_df, x_col, x_order, highlight_days, time_mode = build_time_series_df(exempt_df, params)
+    axis = chart_axis_config(time_mode)
+    section_kpi = ("Exempt vehicles", format_total_kpi(chart_df))
+
+    render_chart_section_header("Exempt vehicles by lane")
+    with st.container(key="exempt_lane_controls"):
+        lane_col1, lane_col2 = st.columns(2, gap="small", vertical_alignment="bottom")
+        with lane_col1:
+            lane_x_axis_dim = section_selectbox(
+                "exempt",
+                "X-axis",
+                options=VOLUME_LANE_X_AXIS_OPTIONS,
+                key="exempt_lane_x_axis",
+            )
+        with lane_col2:
+            show_all_lanes = st.toggle(
+                "Show all lanes",
+                value=False,
+                key="exempt_show_all_lanes",
+                on_change=mark_dashboard_view_for_section,
+                args=("exempt",),
+            )
+
+    if show_all_lanes:
+        lane_map = active_lane_map(chart_df)
+        lane_scope = "all active lanes"
+    else:
+        top = top_lanes_by_volume(chart_df)
+        lane_map = {lane: col for lane, col in LANES.items() if lane in top}
+        lane_scope = "top 5"
+
+    if not lane_map:
+        st.info("No exempt vehicles for the selected period.")
+        return section_kpi
+
+    use_lane_categories_on_x = lane_x_axis_dim == "Lanes"
+    lane_title = f"{exempt_chart_title(time_mode, lane_x_axis_dim)} ({lane_scope})"
+    lane_x_title = (
+        "Lane"
+        if use_lane_categories_on_x
+        else axis["x_axis_title"]
+    )
+    lane_hover_label = lane_x_title if use_lane_categories_on_x else axis["hover_bucket_label"]
+
+    render_comparable_line_chart(
+        "exempt_lanes",
+        exempt_df,
+        lane_map,
+        params,
+        time_mode=time_mode,
+        chart_df=chart_df,
+        x_col=x_col,
+        x_order=x_order,
+        highlight_days=highlight_days,
+        categories_on_x_axis=use_lane_categories_on_x,
+        legend_mode="fixed" if not use_lane_categories_on_x else "default",
+        fixed_legend_order=list(lane_map.keys()),
+        title=lane_title,
+        x_axis_title=lane_x_title,
+        hover_bucket_label=lane_hover_label,
+        compare_enabled=compare_enabled,
+        comparison_params=comparison_params,
+        y_title="Exempt vehicles",
+        total_label="Exempt vehicles",
+    )
 
     return section_kpi
 
@@ -1541,6 +1739,7 @@ def build_gap_line_figure(
     time_mode: str,
     highlight_days: bool,
     compact: bool = False,
+    show_lt2_overlay: bool = False,
 ):
     long_df = gap_avg_long_df(chart_df, x_col, x_order, selected_lanes)
     present = set(long_df["series"].astype(str)) if not long_df.empty else set()
@@ -1552,6 +1751,10 @@ def build_gap_line_figure(
         if lane in selected_lanes
     }
     x_tick_stride = day_x_tick_stride(time_mode, x_order, compact=compact)
+    lt2_overlay_df = None
+    if show_lt2_overlay:
+        overlay = gap_lt2_overlay_long_df(chart_df, x_col, selected_lanes)
+        lt2_overlay_df = overlay if not overlay.empty else None
 
     return line_series_chart(
         long_df,
@@ -1567,7 +1770,58 @@ def build_gap_line_figure(
         series_totals=series_totals or None,
         x_tick_stride=x_tick_stride,
         value_suffix="s",
+        lt2_overlay_df=lt2_overlay_df,
     )
+
+
+def render_gap_summary_tables(
+    chart_df: pd.DataFrame,
+    *,
+    x_col: str,
+    selected_lanes: list[str],
+    axis: dict[str, str],
+    period_label: str,
+    avg_caption: str | None = None,
+    flag_caption: str | None = None,
+    side_by_side: bool = True,
+) -> None:
+    """Per-lane average and abnormal <2s flag tables (one row by default)."""
+    avg_table = gap_lane_avg_table(chart_df, selected_lanes)
+    flag_table = gap_lt2_flag_table(chart_df, x_col, selected_lanes)
+    avg_caption_text = avg_caption or "Per-lane average"
+    flag_caption_text = flag_caption or (
+        f"Abnormal gaps (< 2s) — flagged lane × {axis['x_axis_title'].lower()} — {period_label}"
+    )
+
+    def _render_avg(container) -> None:
+        with container:
+            st.caption(avg_caption_text)
+            if avg_table.empty:
+                st.info("No per-lane averages for the selected filters.")
+            else:
+                st.dataframe(avg_table, hide_index=True, width="stretch")
+
+    def _render_flags(container) -> None:
+        with container:
+            st.caption(flag_caption_text)
+            if flag_table.empty:
+                st.info("No gaps under 2s in the selected lanes/period.")
+            else:
+                st.dataframe(
+                    flag_table,
+                    hide_index=True,
+                    width="stretch",
+                    height=min(360, 42 + 35 * len(flag_table)),
+                )
+
+    if side_by_side:
+        left_col, right_col = st.columns(2, gap="medium")
+        _render_avg(left_col)
+        _render_flags(right_col)
+        return
+
+    _render_avg(st.container())
+    _render_flags(st.container())
 
 
 def render_gap_period_charts(
@@ -1581,7 +1835,8 @@ def render_gap_period_charts(
     highlight_days: bool,
     axis: dict[str, str],
     compact: bool = False,
-    show_table: bool = True,
+    show_tables: bool = True,
+    show_lt2_overlay: bool = False,
 ) -> None:
     period_label = format_period_label(params)
     render_plotly_chart(
@@ -1596,14 +1851,18 @@ def render_gap_period_charts(
             time_mode=time_mode,
             highlight_days=highlight_days,
             compact=compact,
+            show_lt2_overlay=show_lt2_overlay,
         )
     )
 
-    if show_table:
-        table = gap_lane_avg_table(chart_df, selected_lanes)
-        if not table.empty:
-            st.caption("Per-lane average and distribution")
-            st.dataframe(table, hide_index=True, width="content")
+    if show_tables:
+        render_gap_summary_tables(
+            chart_df,
+            x_col=x_col,
+            selected_lanes=selected_lanes,
+            axis=axis,
+            period_label=period_label,
+        )
 
 
 def render_gap_section(gap_df: pd.DataFrame) -> tuple[str, str] | None:
@@ -1626,20 +1885,29 @@ def render_gap_section(gap_df: pd.DataFrame) -> tuple[str, str] | None:
 
     render_chart_section_header("Lane gap (headway)")
     with st.container(key="gap_lane_controls"):
-        show_all_lanes = st.toggle(
-            "Show all lanes",
-            value=False,
-            key="gap_show_all_lanes",
-            on_change=mark_dashboard_view_for_section,
-            args=("gap",),
-        )
+        toggle_cols = st.columns(2, gap="large", vertical_alignment="center")
+        with toggle_cols[0]:
+            show_all_lanes = st.toggle(
+                "Show all lanes",
+                value=False,
+                key="gap_show_all_lanes",
+                on_change=mark_dashboard_view_for_section,
+                args=("gap",),
+            )
+        with toggle_cols[1]:
+            show_lt2_overlay = st.toggle(
+                "Mark <2s gaps on chart",
+                value=False,
+                key="gap_show_lt2_overlay",
+                on_change=mark_dashboard_view_for_section,
+                args=("gap",),
+                help="Diamond markers on the avg-gap line where that lane had at least one gap under 2 seconds.",
+            )
 
     if show_all_lanes:
         lane_options = active_gap_lanes(chart_df)
-        lane_scope = "all active lanes"
     else:
         lane_options = top_gap_lanes_by_volume(chart_df)
-        lane_scope = "top 5"
 
     if not lane_options:
         st.info("No lane gap samples for the selected period.")
@@ -1649,7 +1917,6 @@ def render_gap_section(gap_df: pd.DataFrame) -> tuple[str, str] | None:
     if not selected_lanes:
         selected_lanes = lane_options
 
-    st.caption(f"Showing {lane_scope}")
     section_kpi = ("Avg gap", weighted_avg_gap_kpi(chart_df, selected_lanes))
 
     if not compare_enabled:
@@ -1663,7 +1930,8 @@ def render_gap_section(gap_df: pd.DataFrame) -> tuple[str, str] | None:
             highlight_days=highlight_days,
             axis=axis,
             compact=False,
-            show_table=True,
+            show_tables=True,
+            show_lt2_overlay=show_lt2_overlay,
         )
         return section_kpi
 
@@ -1683,12 +1951,19 @@ def render_gap_section(gap_df: pd.DataFrame) -> tuple[str, str] | None:
             highlight_days=highlight_days,
             axis=axis,
             compact=True,
-            show_table=False,
+            show_tables=False,
+            show_lt2_overlay=show_lt2_overlay,
         )
-        table = gap_lane_avg_table(chart_df, selected_lanes)
-        if not table.empty:
-            st.caption("Primary — per-lane average")
-            st.dataframe(table, hide_index=True, width="content")
+        render_gap_summary_tables(
+            chart_df,
+            x_col=x_col,
+            selected_lanes=selected_lanes,
+            axis=axis,
+            period_label=format_period_label(params),
+            avg_caption="Primary — per-lane average",
+            flag_caption="Primary — abnormal gaps (< 2s)",
+            side_by_side=False,
+        )
 
     with right_col:
         compare_chart_df, compare_x_col, compare_x_order, compare_highlight_days, _ = build_gap_time_series(
@@ -1706,12 +1981,19 @@ def render_gap_section(gap_df: pd.DataFrame) -> tuple[str, str] | None:
             highlight_days=compare_highlight_days,
             axis=axis,
             compact=True,
-            show_table=False,
+            show_tables=False,
+            show_lt2_overlay=show_lt2_overlay,
         )
-        compare_table = gap_lane_avg_table(compare_chart_df, selected_lanes)
-        if not compare_table.empty:
-            st.caption("Comparison — per-lane average")
-            st.dataframe(compare_table, hide_index=True, width="content")
+        render_gap_summary_tables(
+            compare_chart_df,
+            x_col=compare_x_col,
+            selected_lanes=selected_lanes,
+            axis=axis,
+            period_label=format_period_label(comparison_params),
+            avg_caption="Comparison — per-lane average",
+            flag_caption="Comparison — abnormal gaps (< 2s)",
+            side_by_side=False,
+        )
 
     return section_kpi
 
@@ -1734,6 +2016,7 @@ def main() -> None:
         if st.button("Refresh data"):
             load_data.clear()
             load_gap_data.clear()
+            load_exempt_data.clear()
 
     df = load_data(selected_plaza)
     st.session_state["df"] = df
@@ -1744,6 +2027,12 @@ def main() -> None:
         gap_df = pd.DataFrame()
     st.session_state["gap_df"] = gap_df
 
+    try:
+        exempt_df = load_exempt_data(selected_plaza)
+    except Exception:
+        exempt_df = pd.DataFrame()
+    st.session_state["exempt_df"] = exempt_df
+
     kpi_slot = render_dashboard_title()
 
     if df.empty:
@@ -1753,7 +2042,7 @@ def main() -> None:
 
     st.session_state.setdefault("dashboard_kpi_source", VIEW_VOLUME)
 
-    tab_volume, tab_class_mix, tab_mop, tab_gap = st.tabs(list(DASHBOARD_VIEWS))
+    tab_volume, tab_class_mix, tab_mop, tab_gap, tab_exempt = st.tabs(list(DASHBOARD_VIEWS))
 
     with tab_volume:
         render_volume_section(df)
@@ -1763,6 +2052,8 @@ def main() -> None:
         render_mop_section(df)
     with tab_gap:
         render_gap_section(gap_df)
+    with tab_exempt:
+        render_exempt_section(exempt_df)
 
     active_view = resolve_active_dashboard_view()
     section_kpi = compute_section_kpi(df, active_view)
@@ -1771,6 +2062,7 @@ def main() -> None:
         VIEW_CLASS_MIX: "class_mix",
         VIEW_MOP: "mop",
         VIEW_GAP: "gap",
+        VIEW_EXEMPT: "exempt",
     }.get(active_view)
     comparison_active = bool(active_section_key and st.session_state.get(f"{active_section_key}_compare"))
     if section_kpi and not comparison_active:

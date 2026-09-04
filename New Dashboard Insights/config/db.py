@@ -102,11 +102,17 @@ def ensure_analytics_table(conn, table_name: str, count_columns: list[str]) -> N
         print(f"All {len(count_columns)} metric columns already exist in '{table_name}'.")
 
 
-def ensure_gap_distribution_table(conn, table_name: str, lane_columns: list[str]) -> None:
+def ensure_gap_distribution_table(
+    conn,
+    table_name: str,
+    avg_lane_columns: list[str],
+    lt2_lane_columns: list[str],
+) -> None:
     """
     Create the gap-per-lane hourly table if missing.
-    Grain: (plaza_name, date, hour) with wide lane columns (l01…l12 = avg gap sec)
-    plus hour-level gap_lt_2s_count / gap_lt_2s_pct.
+    Grain: (plaza_name, date, hour) with:
+      - l01…l12 = avg gap seconds
+      - l01_lt2_count…l12_lt2_count = gaps < 2s per lane
     """
     existing = fetch_existing_columns(conn, table_name)
 
@@ -117,10 +123,10 @@ def ensure_gap_distribution_table(conn, table_name: str, lane_columns: list[str]
             "date DATE NOT NULL",
             "hour TEXT NOT NULL",
         ]
-        for column_name in lane_columns:
+        for column_name in avg_lane_columns:
             column_defs.append(f"{column_name} DOUBLE PRECISION")
-        column_defs.append("gap_lt_2s_count INTEGER NOT NULL DEFAULT 0")
-        column_defs.append("gap_lt_2s_pct DOUBLE PRECISION NOT NULL DEFAULT 0")
+        for column_name in lt2_lane_columns:
+            column_defs.append(f"{column_name} INTEGER NOT NULL DEFAULT 0")
         column_defs.append("UNIQUE (plaza_name, date, hour)")
 
         create_sql = sql.SQL(
@@ -132,12 +138,15 @@ def ensure_gap_distribution_table(conn, table_name: str, lane_columns: list[str]
         with conn.cursor() as cursor:
             cursor.execute(create_sql)
         conn.commit()
-        print(f"Created table '{table_name}' with {len(lane_columns)} lane column(s).")
+        print(
+            f"Created table '{table_name}' with {len(avg_lane_columns)} avg-lane "
+            f"and {len(lt2_lane_columns)} lt2-lane column(s)."
+        )
         return
 
     added: list[str] = []
     with conn.cursor() as cursor:
-        for column_name in lane_columns:
+        for column_name in avg_lane_columns:
             if column_name in existing:
                 continue
             alter_sql = sql.SQL(
@@ -149,21 +158,18 @@ def ensure_gap_distribution_table(conn, table_name: str, lane_columns: list[str]
             cursor.execute(alter_sql)
             added.append(column_name)
 
-        if "gap_lt_2s_count" not in existing:
+        for column_name in lt2_lane_columns:
+            if column_name in existing:
+                continue
             alter_sql = sql.SQL(
-                "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS gap_lt_2s_count "
+                "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS {column} "
                 "INTEGER NOT NULL DEFAULT 0"
-            ).format(table=sql.Identifier(table_name))
+            ).format(
+                table=sql.Identifier(table_name),
+                column=sql.Identifier(column_name),
+            )
             cursor.execute(alter_sql)
-            added.append("gap_lt_2s_count")
-
-        if "gap_lt_2s_pct" not in existing:
-            alter_sql = sql.SQL(
-                "ALTER TABLE {table} ADD COLUMN IF NOT EXISTS gap_lt_2s_pct "
-                "DOUBLE PRECISION NOT NULL DEFAULT 0"
-            ).format(table=sql.Identifier(table_name))
-            cursor.execute(alter_sql)
-            added.append("gap_lt_2s_pct")
+            added.append(column_name)
 
     if added:
         conn.commit()
