@@ -1167,7 +1167,7 @@ def main():
         excel_file_path=excel_file_path,
         from_date=from_date,
         to_date=to_date,
-        base_folder="IDFC_Life_cycle_files_from_July07_to_August09"
+        base_folder="YES July7_to_Aug9"
         # base_folder="ICICI Bank Files"
     )
 

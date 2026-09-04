@@ -8,6 +8,7 @@ Run from project root:
 from __future__ import annotations
 
 import calendar
+import random
 from datetime import date, timedelta
 
 import pandas as pd
@@ -24,21 +25,28 @@ from config import (
     VEHICLE_CLASSES,
 )
 from data_utils import (
+    active_gap_lanes,
     active_lane_map,
     aggregate_daily_range,
     aggregate_hourly_window,
-    aggregate_monthly_daily,
+    aggregate_month_span,
+    build_gap_time_series,
     format_hour_window,
     format_total_kpi,
+    gap_avg_long_df,
+    gap_lane_avg_table,
+    gap_lane_vehicle_totals,
     hour_labels_from_range,
     hour_sort_key,
     melt_metric_columns,
     melt_time_buckets_by_category,
     series_order_by_total,
     series_order_from_labels,
+    top_gap_lanes_by_volume,
     top_lanes_by_volume,
+    weighted_avg_gap_kpi,
 )
-from db import fetch_analytics, fetch_plaza_names
+from db import fetch_analytics, fetch_gap_distribution, fetch_plaza_names
 
 st.set_page_config(
     page_title="NHIT Analytics",
@@ -51,7 +59,8 @@ TIME_MODES = ("Hours", "Day on day", "Month")
 VIEW_VOLUME = "Vehicle class & Lane distribution"
 VIEW_CLASS_MIX = "Class Mix"
 VIEW_MOP = "MOP Distribution"
-DASHBOARD_VIEWS = (VIEW_VOLUME, VIEW_CLASS_MIX, VIEW_MOP)
+VIEW_GAP = "Gap Distribution"
+DASHBOARD_VIEWS = (VIEW_VOLUME, VIEW_CLASS_MIX, VIEW_MOP, VIEW_GAP)
 
 AXIS_CONFIG = {
     "Hours": {"x_axis_title": "Hour", "hover_bucket_label": "Hour"},
@@ -62,7 +71,7 @@ AXIS_CONFIG = {
 
 VOLUME_CLASS_X_AXIS_OPTIONS = ("Time", "Vehicle class")
 VOLUME_LANE_X_AXIS_OPTIONS = ("Time", "Lanes")
-DEFAULT_HOUR_RANGE = (8, 14)
+DEFAULT_HOUR_RANGE = (0, 12)
 CONTROL_MIN_WIDTH = "180px"
 SLIDER_MIN_WIDTH = "260px"
 DAY_TICK_DENSITY_LIMIT = 25
@@ -118,7 +127,8 @@ def apply_compact_control_styles() -> None:
             padding-top: 0.8rem;
             padding-bottom: 0.8rem;
         }}
-        div[class*="lane_chart_controls"] {{
+        div[class*="lane_chart_controls"],
+        div[class*="gap_lane_controls"] {{
             width: 100% !important;
             max-width: 100% !important;
         }}
@@ -150,7 +160,9 @@ def apply_compact_control_styles() -> None:
             max-width: 100% !important;
         }}
         div[class*="lane_chart_controls"] div[data-testid="stCheckbox"],
-        div[class*="lane_chart_controls"] div[data-testid="stToggle"] {{
+        div[class*="lane_chart_controls"] div[data-testid="stToggle"],
+        div[class*="gap_lane_controls"] div[data-testid="stCheckbox"],
+        div[class*="gap_lane_controls"] div[data-testid="stToggle"] {{
             min-width: max-content !important;
         }}
         div[class*="_time_controls"] {{
@@ -208,31 +220,28 @@ def apply_compact_control_styles() -> None:
         div[data-testid="stPlotlyChart"] {{
             margin-top: 0.15rem;
         }}
-        div[class*="_category_selector"] div[data-testid="stCheckbox"] {{
-            min-width: max-content !important;
+        div[class*="_category_selector"] {{
+            margin-top: 0.15rem;
+            margin-bottom: 0.35rem;
         }}
-        div[class*="_category_selector"] div[data-testid="stCheckbox"] label p {{
-            white-space: nowrap;
-            font-size: 0.95rem;
+        div[class*="_category_selector"] div[data-testid="stCaptionContainer"] {{
+            margin-bottom: 0.2rem !important;
         }}
-        div[class*="_category_selector"] div[data-testid="stHorizontalBlock"] {{
-            width: 100% !important;
-            max-width: 100% !important;
-            column-gap: 0.5rem !important;
-            row-gap: 0.45rem !important;
+        div[class*="_category_selector"] div[data-testid="stPills"] {{
+            margin-top: 0 !important;
+            margin-bottom: 0.15rem !important;
+        }}
+        div[class*="_category_selector"] div[data-testid="stPills"] > div {{
+            gap: 0.3rem !important;
+            row-gap: 0.3rem !important;
             flex-wrap: wrap !important;
-            justify-content: flex-start !important;
-            align-items: center !important;
-            overflow: visible !important;
         }}
-        div[class*="_category_selector"] div[data-testid="stHorizontalBlock"] > div[data-testid="column"] {{
-            flex: 0 0 auto !important;
-            width: auto !important;
-            min-width: max-content !important;
-            padding: 0.25rem 0.55rem !important;
-            border: 1px solid rgba(128, 128, 128, 0.35) !important;
-            border-radius: 6px;
-            box-sizing: border-box;
+        div[class*="_category_selector"] div[data-testid="stPills"] button {{
+            min-height: 1.7rem !important;
+            padding: 0.15rem 0.55rem !important;
+            font-size: 0.88rem !important;
+            line-height: 1.2 !important;
+            border-radius: 999px !important;
         }}
         @media (max-width: 768px) {{
             div[data-testid="stSelectbox"] > div,
@@ -240,9 +249,6 @@ def apply_compact_control_styles() -> None:
             div[data-testid="stSlider"] {{
                 max-width: 100%;
                 min-width: 0;
-            }}
-            div[class*="_category_selector"] div[data-testid="stHorizontalBlock"] {{
-                width: 100% !important;
             }}
             div[class*="lane_chart_controls"] div[data-testid="stHorizontalBlock"] {{
                 width: 100% !important;
@@ -259,6 +265,7 @@ SECTION_KEY_TO_VIEW = {
     "volume": VIEW_VOLUME,
     "class_mix": VIEW_CLASS_MIX,
     "mop": VIEW_MOP,
+    "gap": VIEW_GAP,
 }
 
 def mark_dashboard_view(view: str) -> None:
@@ -297,9 +304,36 @@ def filter_df_by_params(df: pd.DataFrame, params: dict) -> pd.DataFrame:
         return df[(df["date"] == params["selected_date"]) & (df["hour"].isin(params["hour_labels"]))]
     if mode == "Day on day":
         return df[(df["date"] >= params["start_date"]) & (df["date"] <= params["end_date"])]
-    month_start = date(params["year"], params["month"], 1)
-    month_end = date(params["year"], params["month"], calendar.monthrange(params["year"], params["month"])[1])
-    return df[(df["date"] >= month_start) & (df["date"] <= month_end)]
+    year_months = params.get("year_months") or [(params["year"], params["month"])]
+    masks = []
+    for year, month in year_months:
+        month_start = date(year, month, 1)
+        month_end = date(year, month, calendar.monthrange(year, month)[1])
+        masks.append((df["date"] >= month_start) & (df["date"] <= month_end))
+    if not masks:
+        return df.iloc[0:0].copy()
+    combined = masks[0]
+    for mask in masks[1:]:
+        combined = combined | mask
+    return df[combined]
+
+
+def year_month_key(year: int, month: int) -> str:
+    return f"{year}-{month:02d}"
+
+
+def parse_year_month_key(value: str) -> tuple[int, int]:
+    year_text, month_text = str(value).split("-", 1)
+    return int(year_text), int(month_text)
+
+
+def format_year_month_key(value: str) -> str:
+    year, month = parse_year_month_key(value)
+    return f"{calendar.month_name[month]} {year}"
+
+
+def available_year_month_keys(dates: list[date]) -> list[str]:
+    return [year_month_key(year, month) for year, month in sorted({(value.year, value.month) for value in dates})]
 
 
 def build_params_from_session(section_key: str, dates: list[date]) -> dict | None:
@@ -309,7 +343,7 @@ def build_params_from_session(section_key: str, dates: list[date]) -> dict | Non
 
     mode = st.session_state[mode_key]
     params: dict = {"mode": mode}
-    flexible_hours = section_key == "volume"
+    flexible_hours = section_key in {"volume", "gap"}
 
     if mode == "Hours":
         date_key = f"{section_key}_hour_date"
@@ -338,12 +372,25 @@ def build_params_from_session(section_key: str, dates: list[date]) -> dict | Non
             return None
         return params
 
-    year_key = f"{section_key}_year"
-    month_key = f"{section_key}_month"
-    if year_key not in st.session_state or month_key not in st.session_state:
+    months_key = f"{section_key}_year_months"
+    if months_key not in st.session_state:
+        # Backward compat with older single year/month widgets.
+        year_key = f"{section_key}_year"
+        month_key = f"{section_key}_month"
+        if year_key in st.session_state and month_key in st.session_state:
+            params["year_months"] = [(st.session_state[year_key], st.session_state[month_key])]
+            params["year"] = st.session_state[year_key]
+            params["month"] = st.session_state[month_key]
+            return params
         return None
-    params["year"] = st.session_state[year_key]
-    params["month"] = st.session_state[month_key]
+
+    selected_keys = st.session_state[months_key] or []
+    if not selected_keys:
+        return None
+    year_months = sorted(parse_year_month_key(value) for value in selected_keys)
+    params["year_months"] = year_months
+    params["year"] = year_months[0][0]
+    params["month"] = year_months[0][1]
     return params
 
 
@@ -363,11 +410,32 @@ def resolve_active_dashboard_view() -> str:
 
 
 def compute_section_kpi(df: pd.DataFrame, view: str) -> tuple[str, str] | None:
-    if df.empty:
+    if df.empty and view != VIEW_GAP:
         return None
 
-    section_key = {VIEW_VOLUME: "volume", VIEW_CLASS_MIX: "class_mix", VIEW_MOP: "mop"}.get(view)
+    section_key = {
+        VIEW_VOLUME: "volume",
+        VIEW_CLASS_MIX: "class_mix",
+        VIEW_MOP: "mop",
+        VIEW_GAP: "gap",
+    }.get(view)
     if not section_key:
+        return None
+
+    if view == VIEW_GAP:
+        gap_df = st.session_state.get("gap_df", pd.DataFrame())
+        if gap_df is None or gap_df.empty:
+            return ("Avg gap", "—")
+        dates = available_dates(gap_df)
+        if not dates:
+            return ("Avg gap", "—")
+        params = build_params_from_session(section_key, dates)
+        if not params:
+            return ("Avg gap", "—")
+        chart_df, _, _, _, _ = build_gap_time_series(gap_df, params)
+        return ("Avg gap", weighted_avg_gap_kpi(chart_df))
+
+    if df.empty:
         return None
 
     dates = available_dates(df)
@@ -391,7 +459,9 @@ def render_dashboard_title() -> st.delta_generator.DeltaGenerator:
     title_col, total_col = st.columns([4, 2], vertical_alignment="center")
     with title_col:
         st.title("NHIT Toll Analytics Dashboard")
-        st.caption("Traffic volume, vehicle class mix, and mode-of-payment trends from nhit_analytics.")
+        st.caption(
+            "Traffic volume, vehicle class mix, mode-of-payment, and lane gap (headway) trends."
+        )
     return total_col.empty()
 
 
@@ -416,32 +486,52 @@ def category_checkbox_key(chart_key: str, category: str) -> str:
     return f"{chart_key}_cat_{category}"
 
 
+def section_key_from_chart_key(chart_key: str) -> str:
+    if chart_key.startswith("volume"):
+        return "volume"
+    if chart_key.startswith("gap"):
+        return "gap"
+    if chart_key.startswith("mop"):
+        return "mop"
+    if chart_key.startswith("class"):
+        return "class_mix"
+    return chart_key
+
+
 def render_category_selector(chart_key: str, category_options: list[str]) -> list[str]:
     options = [str(category) for category in category_options]
     if not options:
         return []
 
     options_key = f"{chart_key}_category_options"
+    pills_key = f"{chart_key}_category_pills"
     if st.session_state.get(options_key) != options:
         st.session_state[options_key] = options
-        for category in options:
-            st.session_state[category_checkbox_key(chart_key, category)] = True
+        st.session_state[pills_key] = options
 
-    for category in options:
-        checkbox_key = category_checkbox_key(chart_key, category)
-        if checkbox_key not in st.session_state:
-            st.session_state[checkbox_key] = True
+    if pills_key not in st.session_state:
+        # Prefer prior checkbox selections when migrating from the old control.
+        prior = [
+            category
+            for category in options
+            if st.session_state.get(category_checkbox_key(chart_key, category), True)
+        ]
+        st.session_state[pills_key] = prior or options
 
     with st.container(key=f"{chart_key}_category_selector"):
-        st.caption("Visible categories")
-        cols = st.columns(len(options), gap="small")
-        selected: list[str] = []
-        for index, category in enumerate(options):
-            with cols[index]:
-                if st.checkbox(category, key=category_checkbox_key(chart_key, category)):
-                    selected.append(category)
+        selected = st.pills(
+            "Visible categories",
+            options=options,
+            selection_mode="multi",
+            key=pills_key,
+            on_change=mark_dashboard_view_for_section,
+            args=(section_key_from_chart_key(chart_key),),
+        )
 
-    return selected
+    if not selected:
+        return []
+    selected_set = {str(value) for value in selected}
+    return [category for category in options if category in selected_set]
 
 
 def format_period_label(params: dict) -> str:
@@ -450,7 +540,9 @@ def format_period_label(params: dict) -> str:
         return f"{params['selected_date']} · {format_hour_window(params['hour_labels'])}"
     if mode == "Day on day":
         return f"{params['start_date']} – {params['end_date']}"
-    return f"{calendar.month_name[params['month']]} {params['year']}"
+    year_months = params.get("year_months") or [(params["year"], params["month"])]
+    labels = [f"{calendar.month_abbr[month]} {year}" for year, month in year_months]
+    return ", ".join(labels)
 
 
 def default_comparison_date(dates: list[date], primary_date: date) -> date:
@@ -480,12 +572,27 @@ def default_comparison_year_month(
     primary_year: int,
     primary_month: int,
 ) -> tuple[int, int]:
-    year_months = sorted({(value.year, value.month) for value in dates})
-    primary_pair = (primary_year, primary_month)
-    alternatives = [pair for pair in year_months if pair > primary_pair]
-    if alternatives:
-        return alternatives[0]
+    year_months = default_comparison_year_months(dates, [(primary_year, primary_month)])
     return year_months[0]
+
+
+def default_comparison_year_months(
+    dates: list[date],
+    primary_year_months: list[tuple[int, int]],
+) -> list[tuple[int, int]]:
+    available = sorted({(value.year, value.month) for value in dates})
+    primary = sorted(primary_year_months) or [available[0]]
+    count = len(primary)
+    last_primary = primary[-1]
+    start_index = next((index + 1 for index, pair in enumerate(available) if pair == last_primary), None)
+    if start_index is not None and start_index < len(available):
+        selected = available[start_index : start_index + count]
+        if len(selected) == count:
+            return selected
+    # Fallback: earliest contiguous block of the same length.
+    if len(available) >= count:
+        return available[:count]
+    return available
 
 
 def initialize_comparison_period(
@@ -522,13 +629,13 @@ def initialize_comparison_period(
         st.session_state[f"{section_key}_cmp_daily_end"] = end_date
         return
 
-    year, month = default_comparison_year_month(
-        dates,
-        primary_params["year"],
-        primary_params["month"],
-    )
-    st.session_state[f"{section_key}_cmp_year"] = year
-    st.session_state[f"{section_key}_cmp_month"] = month
+    year_months = primary_params.get("year_months") or [
+        (primary_params["year"], primary_params["month"])
+    ]
+    compare_months = default_comparison_year_months(dates, year_months)
+    st.session_state[f"{section_key}_cmp_year_months"] = [
+        year_month_key(year, month) for year, month in compare_months
+    ]
 
 
 def filter_long_df_series(long_df: pd.DataFrame, selected_categories: list[str]) -> pd.DataFrame:
@@ -561,6 +668,24 @@ def category_totals(chart_df: pd.DataFrame, column_map: dict[str, str]) -> dict[
     return totals
 
 
+def category_share_table(chart_df: pd.DataFrame, column_map: dict[str, str]) -> pd.DataFrame:
+    """Overall count and % share for each category in the selected period."""
+    totals = category_totals(chart_df, column_map)
+    grand_total = sum(totals.values())
+    rows = []
+    for label in column_map:
+        count = totals.get(str(label), 0)
+        share = (count / grand_total * 100.0) if grand_total else 0.0
+        rows.append(
+            {
+                "Category": str(label),
+                "Count": count,
+                "Share (%)": round(share, 1),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
 def format_chart_total(chart_df: pd.DataFrame, column_map: dict[str, str]) -> str:
     return f"{sum(category_totals(chart_df, column_map).values()):,}"
 
@@ -591,6 +716,7 @@ def build_line_chart_figure(
     period_label: str,
     y_title: str = "Vehicle count",
     compact: bool = False,
+    value_suffix: str = "",
 ):
     long_df, plot_x_col, plot_x_order, series_order = build_volume_chart_data(
         chart_df,
@@ -638,6 +764,7 @@ def build_line_chart_figure(
         series_totals=series_totals,
         x_value_totals=x_value_totals,
         x_tick_stride=x_tick_stride,
+        value_suffix=value_suffix,
     )
 
 
@@ -662,9 +789,13 @@ def render_comparable_line_chart(
     comparison_params: dict | None,
     y_title: str = "Vehicle count",
     total_label: str = "Total vehicles",
-) -> None:
+    selected_categories: list[str] | None = None,
+) -> list[str]:
     category_options = list(fixed_legend_order or column_map.keys())
-    selected_categories = render_category_selector(chart_key, category_options)
+    if selected_categories is None:
+        selected_categories = render_category_selector(chart_key, category_options)
+    if not selected_categories:
+        selected_categories = category_options
 
     primary_label = format_period_label(primary_params)
 
@@ -690,10 +821,10 @@ def render_comparable_line_chart(
                 compact=False,
             ),
         )
-        return
+        return selected_categories
 
     if comparison_params is None:
-        return
+        return selected_categories
 
     left_col, right_col = st.columns(2, gap="small")
     with left_col:
@@ -749,6 +880,8 @@ def render_comparable_line_chart(
             ),
         )
 
+    return selected_categories
+
 
 def chart_axis_config(mode: str) -> dict[str, str]:
     return AXIS_CONFIG.get(mode, {"x_axis_title": "Time", "hover_bucket_label": "Time"})
@@ -786,9 +919,22 @@ def mop_chart_title(time_mode: str) -> str:
     return f"MOP count by {x_label_by_mode.get(time_mode, 'time')}"
 
 
+def render_mop_share_table(chart_df: pd.DataFrame, *, caption: str | None = None) -> None:
+    table = category_share_table(chart_df, MOP_TYPES)
+    if table.empty:
+        return
+    st.caption(caption or "Category share for selected period")
+    st.dataframe(table, hide_index=True, width="content")
+
+
 @st.cache_data(ttl=300)
 def load_data(plaza_name: str) -> pd.DataFrame:
     return fetch_analytics(plaza_name=plaza_name)
+
+
+@st.cache_data(ttl=300)
+def load_gap_data(plaza_name: str) -> pd.DataFrame:
+    return fetch_gap_distribution(plaza_name=plaza_name)
 
 
 def available_dates(df: pd.DataFrame) -> list[date]:
@@ -801,8 +947,12 @@ def earliest_date(dates: list[date]) -> date:
     return dates[0]
 
 
+def random_available_date(dates: list[date]) -> date:
+    return random.choice(dates)
+
+
 def default_day_on_day_range(dates: list[date]) -> tuple[date, date]:
-    """Start from the earliest available date with the minimum required window."""
+    """Earliest available start with the minimum required window."""
     start = earliest_date(dates)
     end = dates[-1]
     for candidate in dates:
@@ -812,20 +962,52 @@ def default_day_on_day_range(dates: list[date]) -> tuple[date, date]:
     return start, end
 
 
+def random_day_on_day_range(dates: list[date]) -> tuple[date, date]:
+    """Random chronological start/end within the allowed day window."""
+    candidates: list[tuple[date, date]] = []
+    for index, start in enumerate(dates):
+        for end in dates[index:]:
+            day_count = (end - start).days + 1
+            if MIN_DAY_WINDOW <= day_count <= MAX_DAY_WINDOW:
+                candidates.append((start, end))
+    if not candidates:
+        return default_day_on_day_range(dates)
+    return random.choice(candidates)
+
+
 def default_year_month(dates: list[date]) -> tuple[int, int]:
     earliest = earliest_date(dates)
     return earliest.year, earliest.month
 
 
+def random_year_month(dates: list[date]) -> tuple[int, int]:
+    pairs = sorted({(value.year, value.month) for value in dates})
+    return random.choice(pairs)
+
+
+def random_year_months(dates: list[date]) -> list[tuple[int, int]]:
+    return [random_year_month(dates)]
+
+
 def validate_day_range(start_date: date, end_date: date) -> tuple[bool, str | None]:
-    if end_date < start_date:
-        return False, "End date cannot be before start date."
+    if start_date > end_date:
+        return False, "Start date cannot be later than end date."
     day_count = (end_date - start_date).days + 1
     if day_count < MIN_DAY_WINDOW:
         return False, f"Select at least {MIN_DAY_WINDOW} days (currently {day_count})."
     if day_count > MAX_DAY_WINDOW:
         return False, f"Select at most {MAX_DAY_WINDOW} days (currently {day_count})."
     return True, None
+
+
+def enforce_day_order(start_key: str, end_key: str) -> None:
+    """Keep session start/end chronological if the user moved one past the other."""
+    start_date = st.session_state.get(start_key)
+    end_date = st.session_state.get(end_key)
+    if start_date is None or end_date is None:
+        return
+    if start_date > end_date:
+        st.session_state[end_key] = start_date
 
 
 def validate_hour_range(start_hour: int, end_hour: int, *, enforce_max: bool = True) -> tuple[bool, str | None]:
@@ -890,7 +1072,7 @@ def render_period_controls(
     params: dict = {"mode": mode}
 
     if mode == "Hours":
-        default_date = earliest_date(dates)
+        default_date = random_available_date(dates)
         default_range = DEFAULT_HOUR_RANGE
         if comparison and primary_params:
             default_date = default_comparison_date(dates, primary_params["selected_date"])
@@ -906,7 +1088,7 @@ def render_period_controls(
             params["selected_date"] = section_date_input(
                 section_key,
                 "Date",
-                value=default_date,
+                value=st.session_state[date_key],
                 min_value=dates[0],
                 max_value=dates[-1],
                 key=date_key,
@@ -931,26 +1113,27 @@ def render_period_controls(
                 primary_params["end_date"],
             )
         else:
-            default_start, default_end = default_day_on_day_range(dates)
+            default_start, default_end = random_day_on_day_range(dates)
         start_key = f"{state_key}_daily_start"
         end_key = f"{state_key}_daily_end"
         st.session_state.setdefault(start_key, default_start)
         st.session_state.setdefault(end_key, default_end)
+        enforce_day_order(start_key, end_key)
         col1, col2 = st.columns(2, gap="small")
         with col1:
             params["start_date"] = section_date_input(
                 section_key,
                 "Start date",
-                value=default_start,
+                value=st.session_state[start_key],
                 min_value=dates[0],
-                max_value=dates[-1],
+                max_value=min(st.session_state[end_key], dates[-1]),
                 key=start_key,
             )
         with col2:
             params["end_date"] = section_date_input(
                 section_key,
                 "End date",
-                value=default_end,
+                value=st.session_state[end_key],
                 min_value=max(params["start_date"], dates[0]),
                 max_value=dates[-1],
                 key=end_key,
@@ -961,38 +1144,49 @@ def render_period_controls(
         return params, is_valid
 
     if comparison and primary_params:
-        default_year, default_month = default_comparison_year_month(
+        default_year_months = default_comparison_year_months(
             dates,
-            primary_params["year"],
-            primary_params["month"],
+            primary_params.get("year_months")
+            or [(primary_params["year"], primary_params["month"])],
         )
     else:
-        default_year, default_month = default_year_month(dates)
-    year_options = sorted({value.year for value in dates}, reverse=True)
-    year_key = f"{state_key}_year"
-    month_key = f"{state_key}_month"
-    st.session_state.setdefault(year_key, default_year)
-    col1, col2 = st.columns(2, gap="small")
-    with col1:
-        params["year"] = section_selectbox(
-            section_key,
-            "Year",
-            options=year_options,
-            index=year_options.index(default_year),
-            key=year_key,
-        )
-    with col2:
-        months_in_year = sorted({value.month for value in dates if value.year == params["year"]})
-        month_default = default_month if default_year == params["year"] else months_in_year[0]
-        st.session_state.setdefault(month_key, month_default)
-        params["month"] = section_selectbox(
-            section_key,
-            "Month",
-            options=months_in_year,
-            format_func=lambda month: calendar.month_name[month],
-            index=months_in_year.index(month_default),
-            key=month_key,
-        )
+        default_year_months = random_year_months(dates)
+
+    month_options = available_year_month_keys(dates)
+    months_key = f"{state_key}_year_months"
+    default_keys = [year_month_key(year, month) for year, month in default_year_months]
+    default_keys = [key for key in default_keys if key in month_options] or month_options[:1]
+
+    if months_key not in st.session_state:
+        # Migrate older single-month widgets if present.
+        legacy_year_key = f"{state_key}_year"
+        legacy_month_key = f"{state_key}_month"
+        if legacy_year_key in st.session_state and legacy_month_key in st.session_state:
+            legacy_key = year_month_key(
+                st.session_state[legacy_year_key],
+                st.session_state[legacy_month_key],
+            )
+            st.session_state[months_key] = [legacy_key] if legacy_key in month_options else default_keys
+        else:
+            st.session_state[months_key] = default_keys
+
+    selected_keys = st.multiselect(
+        "Months",
+        options=month_options,
+        format_func=format_year_month_key,
+        key=months_key,
+        on_change=mark_dashboard_view_for_section,
+        args=(section_key,),
+    )
+    selected_keys = [key for key in (selected_keys or []) if key in month_options]
+    if not selected_keys:
+        st.error("Select at least one month.")
+        return params, False
+
+    year_months = sorted(parse_year_month_key(value) for value in selected_keys)
+    params["year_months"] = year_months
+    params["year"] = year_months[0][0]
+    params["month"] = year_months[0][1]
     return params, True
 
 
@@ -1067,12 +1261,13 @@ def build_time_series_df(df: pd.DataFrame, params: dict) -> tuple[pd.DataFrame, 
         chart_df = aggregate_daily_range(df, params["start_date"], params["end_date"])
         if chart_df.empty:
             return chart_df, "date", None, False, mode
-        chart_df["date"] = chart_df["date"].dt.strftime("%Y-%m-%d")
-        return chart_df, "date", chart_df["date"].tolist(), False, mode
+        x_order = chart_df["date"].astype(str).tolist()
+        return chart_df, "date", x_order, False, mode
 
-    chart_df = aggregate_monthly_daily(df, params["year"], params["month"])
-    x_order = chart_df["day_label"].astype(str).tolist() if not chart_df.empty else None
-    return chart_df, "day_label", x_order, True, mode
+    year_months = params.get("year_months") or [(params["year"], params["month"])]
+    chart_df = aggregate_month_span(df, year_months)
+    x_order = chart_df["date"].astype(str).tolist() if not chart_df.empty else []
+    return chart_df, "date", x_order, False, mode
 
 
 def volume_time_bucket_config(
@@ -1312,6 +1507,212 @@ def render_mop_section(df: pd.DataFrame) -> tuple[str, str] | None:
         total_label="Total transactions",
     )
 
+    if not compare_enabled:
+        render_mop_share_table(chart_df)
+    elif comparison_params is not None:
+        compare_chart_df, _, _, _, _ = build_time_series_df(df, comparison_params)
+        left_col, right_col = st.columns(2, gap="small")
+        with left_col:
+            render_mop_share_table(chart_df, caption="Primary — category share")
+        with right_col:
+            render_mop_share_table(compare_chart_df, caption="Comparison — category share")
+
+    return section_kpi
+
+
+def gap_chart_title(time_mode: str) -> str:
+    x_label_by_mode = {
+        "Hours": "hours",
+        "Day on day": "day on day",
+        "Month": "month",
+    }
+    return f"Average headway by {x_label_by_mode.get(time_mode, 'time')}"
+
+
+def build_gap_line_figure(
+    chart_df: pd.DataFrame,
+    *,
+    x_col: str,
+    x_order: list | None,
+    selected_lanes: list[str],
+    title: str,
+    x_axis_title: str,
+    period_label: str,
+    time_mode: str,
+    highlight_days: bool,
+    compact: bool = False,
+):
+    long_df = gap_avg_long_df(chart_df, x_col, x_order, selected_lanes)
+    present = set(long_df["series"].astype(str)) if not long_df.empty else set()
+    series_order = [lane for lane in LANES if lane in selected_lanes and (not present or lane in present)]
+
+    series_totals = {
+        lane: total
+        for lane, total in gap_lane_vehicle_totals(chart_df).items()
+        if lane in selected_lanes
+    }
+    x_tick_stride = day_x_tick_stride(time_mode, x_order, compact=compact)
+
+    return line_series_chart(
+        long_df,
+        x_col,
+        f"{title} — {period_label}",
+        y_title="Avg gap (seconds)",
+        x_axis_title=x_axis_title,
+        hover_bucket_label=x_axis_title,
+        x_order=x_order,
+        series_order=series_order or None,
+        highlight_every_nth_day=5 if highlight_days else None,
+        compact=compact,
+        series_totals=series_totals or None,
+        x_tick_stride=x_tick_stride,
+        value_suffix="s",
+    )
+
+
+def render_gap_period_charts(
+    chart_df: pd.DataFrame,
+    *,
+    selected_lanes: list[str],
+    params: dict,
+    time_mode: str,
+    x_col: str,
+    x_order: list | None,
+    highlight_days: bool,
+    axis: dict[str, str],
+    compact: bool = False,
+    show_table: bool = True,
+) -> None:
+    period_label = format_period_label(params)
+    render_plotly_chart(
+        build_gap_line_figure(
+            chart_df,
+            x_col=x_col,
+            x_order=x_order,
+            selected_lanes=selected_lanes,
+            title=gap_chart_title(time_mode),
+            x_axis_title=axis["x_axis_title"],
+            period_label=period_label,
+            time_mode=time_mode,
+            highlight_days=highlight_days,
+            compact=compact,
+        )
+    )
+
+    if show_table:
+        table = gap_lane_avg_table(chart_df, selected_lanes)
+        if not table.empty:
+            st.caption("Per-lane average and distribution")
+            st.dataframe(table, hide_index=True, width="content")
+
+
+def render_gap_section(gap_df: pd.DataFrame) -> tuple[str, str] | None:
+    dates = available_dates(gap_df)
+    if not dates:
+        st.warning("No gap distribution data for the selected plaza. Run module2.py first.")
+        return ("Avg gap", "—")
+
+    params, comparison_params, compare_enabled, primary_valid, comparison_valid = render_shared_time_controls(
+        "gap",
+        dates,
+        flexible_hour_window=True,
+        allow_compare=True,
+    )
+    if not primary_valid or (compare_enabled and not comparison_valid):
+        return None
+
+    chart_df, x_col, x_order, highlight_days, time_mode = build_gap_time_series(gap_df, params)
+    axis = chart_axis_config(time_mode)
+
+    render_chart_section_header("Lane gap (headway)")
+    with st.container(key="gap_lane_controls"):
+        show_all_lanes = st.toggle(
+            "Show all lanes",
+            value=False,
+            key="gap_show_all_lanes",
+            on_change=mark_dashboard_view_for_section,
+            args=("gap",),
+        )
+
+    if show_all_lanes:
+        lane_options = active_gap_lanes(chart_df)
+        lane_scope = "all active lanes"
+    else:
+        lane_options = top_gap_lanes_by_volume(chart_df)
+        lane_scope = "top 5"
+
+    if not lane_options:
+        st.info("No lane gap samples for the selected period.")
+        return ("Avg gap", "—")
+
+    selected_lanes = render_category_selector("gap_lanes", lane_options)
+    if not selected_lanes:
+        selected_lanes = lane_options
+
+    st.caption(f"Showing {lane_scope}")
+    section_kpi = ("Avg gap", weighted_avg_gap_kpi(chart_df, selected_lanes))
+
+    if not compare_enabled:
+        render_gap_period_charts(
+            chart_df,
+            selected_lanes=selected_lanes,
+            params=params,
+            time_mode=time_mode,
+            x_col=x_col,
+            x_order=x_order,
+            highlight_days=highlight_days,
+            axis=axis,
+            compact=False,
+            show_table=True,
+        )
+        return section_kpi
+
+    if comparison_params is None:
+        return section_kpi
+
+    left_col, right_col = st.columns(2, gap="small")
+    with left_col:
+        st.metric("Avg gap", weighted_avg_gap_kpi(chart_df, selected_lanes))
+        render_gap_period_charts(
+            chart_df,
+            selected_lanes=selected_lanes,
+            params=params,
+            time_mode=time_mode,
+            x_col=x_col,
+            x_order=x_order,
+            highlight_days=highlight_days,
+            axis=axis,
+            compact=True,
+            show_table=False,
+        )
+        table = gap_lane_avg_table(chart_df, selected_lanes)
+        if not table.empty:
+            st.caption("Primary — per-lane average")
+            st.dataframe(table, hide_index=True, width="content")
+
+    with right_col:
+        compare_chart_df, compare_x_col, compare_x_order, compare_highlight_days, _ = build_gap_time_series(
+            gap_df,
+            comparison_params,
+        )
+        st.metric("Avg gap", weighted_avg_gap_kpi(compare_chart_df, selected_lanes))
+        render_gap_period_charts(
+            compare_chart_df,
+            selected_lanes=selected_lanes,
+            params=comparison_params,
+            time_mode=time_mode,
+            x_col=compare_x_col,
+            x_order=compare_x_order,
+            highlight_days=compare_highlight_days,
+            axis=axis,
+            compact=True,
+            show_table=False,
+        )
+        compare_table = gap_lane_avg_table(compare_chart_df, selected_lanes)
+        if not compare_table.empty:
+            st.caption("Comparison — per-lane average")
+            st.dataframe(compare_table, hide_index=True, width="content")
+
     return section_kpi
 
 
@@ -1332,9 +1733,16 @@ def main() -> None:
         selected_plaza = st.selectbox("Plaza", plazas)
         if st.button("Refresh data"):
             load_data.clear()
+            load_gap_data.clear()
 
     df = load_data(selected_plaza)
     st.session_state["df"] = df
+
+    try:
+        gap_df = load_gap_data(selected_plaza)
+    except Exception:
+        gap_df = pd.DataFrame()
+    st.session_state["gap_df"] = gap_df
 
     kpi_slot = render_dashboard_title()
 
@@ -1345,7 +1753,7 @@ def main() -> None:
 
     st.session_state.setdefault("dashboard_kpi_source", VIEW_VOLUME)
 
-    tab_volume, tab_class_mix, tab_mop = st.tabs(list(DASHBOARD_VIEWS))
+    tab_volume, tab_class_mix, tab_mop, tab_gap = st.tabs(list(DASHBOARD_VIEWS))
 
     with tab_volume:
         render_volume_section(df)
@@ -1353,6 +1761,8 @@ def main() -> None:
         render_class_mix_section(df)
     with tab_mop:
         render_mop_section(df)
+    with tab_gap:
+        render_gap_section(gap_df)
 
     active_view = resolve_active_dashboard_view()
     section_kpi = compute_section_kpi(df, active_view)
@@ -1360,6 +1770,7 @@ def main() -> None:
         VIEW_VOLUME: "volume",
         VIEW_CLASS_MIX: "class_mix",
         VIEW_MOP: "mop",
+        VIEW_GAP: "gap",
     }.get(active_view)
     comparison_active = bool(active_section_key and st.session_state.get(f"{active_section_key}_compare"))
     if section_kpi and not comparison_active:

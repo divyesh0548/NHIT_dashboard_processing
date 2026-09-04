@@ -20,7 +20,7 @@ import pandas as pd
 
 from db_config import get_process_date_range_strings
 
-PREFER_CCH_TXN_ID_IN_LIFE_CYCLE_FILES = False
+PREFER_CCH_TXN_ID_IN_LIFE_CYCLE_FILES = True
 
 
 def build_combined_report_filename(
@@ -348,7 +348,7 @@ def process_plazas_from_excel(
 if __name__ == "__main__":
     excel_file_path = "Reference_File.xlsx"
     # life_cycle_base_folder = "ICICI_files"
-    life_cycle_base_folder = "IDFC_Life_cycle_files_from_July07_to_August09"
+    life_cycle_base_folder = "YES July7_to_Aug9"
     resume_from_violation_lookup = False
     combined_report_base_folder = "."
 

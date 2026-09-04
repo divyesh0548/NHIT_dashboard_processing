@@ -20,10 +20,10 @@ from Violation_lookup import normalize_txn_id_for_comparison  # noqa: E402
 
 
 # --- Configuration (edit before running) ---
-PLAZA_NAME = "patgaon"
-FROM_DATE = "2026-05-25"  # YYYY-MM-DD
-TO_DATE = "2026-07-06"    # YYYY-MM-DD
-INPUT_FOLDER = SCRIPT_DIR / "Patgaon"  # folder with Excel files to update
+PLAZA_NAME = "nathavalasa"
+FROM_DATE = "2026-08-01"  # YYYY-MM-DD
+TO_DATE = "2026-08-09"    # YYYY-MM-DD
+INPUT_FOLDER = SCRIPT_DIR / "Nathavalasa"  # folder with Excel files to update
 # EXISTING_ETC_FOLDER = SCRIPT_DIR / "chhapar_etc_files"   # Example: SCRIPT_DIR / "galia_etc_files"
 EXISTING_ETC_FOLDER = None # Example: SCRIPT_DIR / "galia_etc_files"
 # ETC file transaction ID column source: "exit", "agency", or "cch"

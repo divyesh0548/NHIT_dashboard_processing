@@ -145,11 +145,23 @@ def _disable_series_hovers(fig: go.Figure) -> None:
         trace.hovertemplate = None
 
 
+def _format_hover_value(value) -> str:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return str(value)
+    if abs(number - round(number)) < 1e-9:
+        return f"{int(round(number)):,}"
+    return f"{number:,.2f}"
+
+
 def _apply_sorted_x_hover(
     fig: go.Figure,
     plot_df: pd.DataFrame,
     x_col: str,
     categories: list[str],
+    *,
+    value_suffix: str = "",
 ) -> None:
     """Single x-aligned hover box with color swatches, sorted by count (descending)."""
     series_colors = _series_color_map(fig)
@@ -163,7 +175,7 @@ def _apply_sorted_x_hover(
         lines = [
             (
                 f"<span style='color:{series_colors.get(str(row['series']), 'currentColor')}'>█</span> "
-                f"{row['series']}: {int(row['count']):,}"
+                f"{row['series']}: {_format_hover_value(row['count'])}{value_suffix}"
             )
             for _, row in subset.iterrows()
         ]
@@ -220,6 +232,7 @@ def line_series_chart(
     series_totals: dict[str, int] | None = None,
     x_value_totals: dict[str, int] | None = None,
     x_tick_stride: int = 1,
+    value_suffix: str = "",
 ) -> go.Figure:
     chart_height = CHART_HEIGHT_COMPARE if compact else None
     if long_df.empty:
@@ -268,7 +281,75 @@ def line_series_chart(
     if highlight_every_nth_day and categories:
         _apply_monthly_highlights(fig, categories, every_n=highlight_every_nth_day)
 
-    _apply_sorted_x_hover(fig, plot_df, x_col, categories)
+    _apply_sorted_x_hover(fig, plot_df, x_col, categories, value_suffix=value_suffix)
+    return fig
+
+
+def gap_distribution_box_chart(
+    dist_df: pd.DataFrame,
+    title: str,
+    *,
+    compact: bool = False,
+) -> go.Figure:
+    """
+    One box per lane using stored distribution stats.
+    Whiskers = min/max, box edges = p10/p90, center = median.
+    """
+    chart_height = CHART_HEIGHT_COMPARE if compact else None
+    if dist_df.empty:
+        fig = go.Figure()
+        fig.update_layout(**_base_layout(title, "Gap (seconds)", show_legend=False, height=chart_height))
+        fig.add_annotation(text="No data for the selected filters", showarrow=False, y=0.5, x=0.5)
+        return fig
+
+    fig = go.Figure()
+    for _, row in dist_df.iterrows():
+        lane = str(row["lane_no"])
+        if pd.isna(row.get("median_gap_sec")):
+            continue
+        lower = row.get("min_gap_sec")
+        q1 = row.get("p10_gap_sec")
+        median = row.get("median_gap_sec")
+        q3 = row.get("p90_gap_sec")
+        upper = row.get("max_gap_sec")
+        avg = row.get("avg_gap_sec")
+
+        # Plotly box with precomputed quartiles (p10/p90 used as box edges).
+        fig.add_trace(
+            go.Box(
+                name=lane,
+                q1=[q1],
+                median=[median],
+                q3=[q3],
+                lowerfence=[lower],
+                upperfence=[upper],
+                mean=[avg] if pd.notna(avg) else None,
+                boxmean=True if pd.notna(avg) else False,
+                boxpoints=False,
+                hovertemplate=(
+                    f"<b>{lane}</b><br>"
+                    f"Min: {_format_hover_value(lower)}s<br>"
+                    f"P10: {_format_hover_value(q1)}s<br>"
+                    f"Median: {_format_hover_value(median)}s<br>"
+                    f"Avg: {_format_hover_value(avg)}s<br>"
+                    f"P90: {_format_hover_value(q3)}s<br>"
+                    f"Max: {_format_hover_value(upper)}s"
+                    "<extra></extra>"
+                ),
+            )
+        )
+
+    if not fig.data:
+        fig.update_layout(**_base_layout(title, "Gap (seconds)", show_legend=False, height=chart_height))
+        fig.add_annotation(text="No gap samples for the selected filters", showarrow=False, y=0.5, x=0.5)
+        return fig
+
+    fig.update_layout(
+        **_base_layout(title, "Gap (seconds)", show_legend=False, hovermode="closest", height=chart_height),
+        boxmode="group",
+    )
+    fig.update_xaxes(title="Lane", type="category", fixedrange=True)
+    fig.update_yaxes(fixedrange=True, rangemode="tozero")
     return fig
 
 

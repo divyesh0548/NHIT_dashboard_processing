@@ -1,8 +1,5 @@
-Madappam, Mailgalganj
-
-Reports of Nov,Dec - 2025 not available on IDFC portal.
 
 
 
-Mailgalganj
-processed from Jan to 25 May
+
+Dashboard Link : https://etoll.idfcbank.com/dimtspay_concess/concessioner/dwTxnHistReport

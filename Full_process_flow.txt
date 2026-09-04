@@ -36,7 +36,7 @@ After this completes, it marks plaza as done in Reference_File.xlsx
 
 ===========Approved Violation=====================
 
-1. It reads plaza name and date range from Reference_File.xlsx in same manner as previous process. It do not read dates from excel file, rather it is written inside code.
+1. It reads plaza name from Reference_File.xlsx in same manner as previous process. It do not read dates from excel file, rather it is written inside code.
 
 2. Clears old Approved violation amount from db_column : 'violation_amt'
 
