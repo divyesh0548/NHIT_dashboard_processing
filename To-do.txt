@@ -1,0 +1,3 @@
+For some reason the "Manual Violations Raised (in Rs.)" are not detected after recent change in "C:\Divyesh\NHIT_dashboard_processing\Violation Lookup\main_automation_with_excel.py". Fix that for ICICI bank files.
+
+ICICI files = "C:\Divyesh\NHIT_dashboard_processing\Violation Lookup\ICICI Bank reports from July07"

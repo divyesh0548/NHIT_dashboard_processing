@@ -10,6 +10,11 @@ from Violation_lookup import (
     match_and_generate_output,
 )
 from exception_value_count import clear_exception_values, calculate_exception_values
+from extraction import (
+    delete_violation_amt,
+    extract_date_from_datetime,
+    update_violation_amt_in_db,
+)
 from update_manual_violation_from_excel import (
     clear_manual_violation,
     process_excel_and_update_db,
@@ -104,11 +109,69 @@ def extract_violation_report(
         return None
 
 
+def date_totals_from_lifecycle_rows(violation_amts, reader_read_times) -> dict:
+    """
+    Sum violation amounts by the date already present on each lifecycle row.
+    Uses the rows read for violation lookup, so the bank files are not read again.
+    """
+    date_totals: dict[str, float] = {}
+    for amount, read_time in zip(violation_amts, reader_read_times):
+        date_str = extract_date_from_datetime(read_time)
+        if not date_str:
+            continue
+        try:
+            if amount is None or pd.isna(amount):
+                value = 0.0
+            else:
+                value = float(amount)
+        except (TypeError, ValueError):
+            value = 0.0
+        date_totals[date_str] = date_totals.get(date_str, 0.0) + value
+    return date_totals
+
+
+def update_approved_violation_amt(plaza_name: str, date_totals: dict) -> bool:
+    """
+    Clear and rewrite submissions.violation_amt from lifecycle date totals.
+    Must run after exception_value is written: the update only lands on a row
+    that already has a non-zero exception_value.
+    """
+    if not date_totals:
+        print(f"No lifecycle dates found for approved violation_amt update ({plaza_name}).")
+        return False
+
+    dates = sorted(date_totals)
+    from_date, to_date = dates[0], dates[-1]
+    print(f"\n{'=' * 80}")
+    print("APPROVED VIOLATION AMOUNT")
+    print(f"{'=' * 80}")
+    print(f"Plaza: {plaza_name}")
+    print(f"Dates taken from lifecycle reports: {from_date} to {to_date} ({len(dates)} date(s))")
+
+    delete_stats = delete_violation_amt(plaza_name, from_date, to_date)
+    if not delete_stats.get("success", False):
+        print(f"Failed to clear old violation_amt for {plaza_name}.")
+        return False
+
+    stats = update_violation_amt_in_db(plaza_name, date_totals)
+    if not isinstance(stats, dict):
+        print(f"Failed to update violation_amt for {plaza_name}.")
+        return False
+
+    print(
+        f"Approved violation_amt for {plaza_name}: "
+        f"updated={stats.get('updated', 0)}, "
+        f"already_exists={stats.get('already_exists', 0)}, "
+        f"no_valid_rows={stats.get('no_valid_rows', 0)}"
+    )
+    return True
+
+
 def process_violation_lookup(
     excel_file_path: str,
     folder_path: str,
     prefer_cch_txn_id_in_life_cycle_files: bool = False,
-     ):
+):
     print(f"\n{'=' * 80}")
     print("VIOLATION LOOKUP PROCESSING")
     print(f"{'=' * 80}")
@@ -119,12 +182,12 @@ def process_violation_lookup(
     # Check if Excel file exists
     if not Path(excel_file_path).exists():
         print(f"\nError: Excel file not found: {excel_file_path}")
-        return False
+        return False, {}
 
     # Check if folder exists
     if not Path(folder_path).exists():
         print(f"\nError: Folder not found: {folder_path}")
-        return False
+        return False, {}
 
     # Process single Excel file
     print(f"\n{'=' * 80}")
@@ -134,7 +197,7 @@ def process_violation_lookup(
 
     if not single_file_results or df_single is None:
         print("Error: Could not process single Excel file.")
-        return False
+        return False, {}
 
     # Process all Excel files in the folder
     print(f"\n{'=' * 80}")
@@ -151,7 +214,13 @@ def process_violation_lookup(
 
     if not folder_results:
         print("Warning: No results from folder files. Skipping comparison.")
-        return False
+        return False, {}
+
+    date_totals = date_totals_from_lifecycle_rows(violation_amts, reader_read_times)
+    print(
+        f"Lifecycle date totals collected for approved violation_amt: "
+        f"{len(date_totals)} date(s)"
+    )
 
     # Match and mark violation_matched on the combined report (no intermediate output files)
     print(f"\n{'=' * 80}")
@@ -191,12 +260,12 @@ def process_violation_lookup(
         print(f"{'=' * 80}")
         print(f"Updated Excel file: {excel_file_path}")
         print(f"{'=' * 80}")
-        return True
-    else:
-        print(f"\n{'=' * 80}")
-        print("VIOLATION LOOKUP FAILED")
-        print(f"{'=' * 80}")
-        return False
+        return True, date_totals
+
+    print(f"\n{'=' * 80}")
+    print("VIOLATION LOOKUP FAILED")
+    print(f"{'=' * 80}")
+    return False, {}
 
 
 def process_plazas_from_excel(
@@ -293,7 +362,7 @@ def process_plazas_from_excel(
             print(
                 f"Processing violation lookup with Life Cycle files for {plaza_name_db}"
             )
-            violation_lookup_success = process_violation_lookup(
+            violation_lookup_success, lifecycle_date_totals = process_violation_lookup(
                 output_path,
                 folder_path,
                 prefer_cch_txn_id_in_life_cycle_files=PREFER_CCH_TXN_ID_IN_LIFE_CYCLE_FILES,
@@ -309,6 +378,15 @@ def process_plazas_from_excel(
                 print(f"Calculating exception values for {plaza_name_db}")
                 calculate_exception_values(output_path, plaza_name_db)
                 print(f"Exceptions calculated and updated in DB for {plaza_name_db}")
+
+                # Same lifecycle rows already read above. Dates come from those rows.
+                print(f"Updating approved violation_amt for {plaza_name_db}")
+                violation_amt_ok = update_approved_violation_amt(
+                    plaza_name_db, lifecycle_date_totals
+                )
+                if not violation_amt_ok:
+                    print(f"Approved violation_amt update failed for {plaza_name_db}.")
+                    continue
 
                 # Clear old manual violation values first
                 print(f"Clearing manual violation values for {plaza_name_db}")
@@ -348,7 +426,7 @@ def process_plazas_from_excel(
 if __name__ == "__main__":
     excel_file_path = "Reference_File.xlsx"
     # life_cycle_base_folder = "ICICI_files"
-    life_cycle_base_folder = "YES July7_to_Aug9"
+    life_cycle_base_folder = "ICICI Bank reports from July07"
     resume_from_violation_lookup = False
     combined_report_base_folder = "."
 

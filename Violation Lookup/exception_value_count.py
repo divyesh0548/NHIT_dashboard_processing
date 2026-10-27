@@ -502,13 +502,13 @@ if __name__ == "__main__":
     # ============================================================================
     # CONFIGURATION
     # ============================================================================
-    excel_file_path = "chalageri_combined_2025-11-23_to_2026-02-15.xlsx"
-    plaza_name = "bahadrabad"
+    excel_file_path = "odhaki_paipkhar_combined_2026-06-01_to_2026-07-31.xlsx"
+    plaza_name = "odhaki_paipkhar"
     # ============================================================================
 
-    clear_exception_values(plaza_name, "2025-11-23", "2026-05-25")
+    clear_exception_values(plaza_name, "2026-06-01", "2026-07-31")
 
-    # calculate_exception_values(excel_file_path, plaza_name)
+    calculate_exception_values(excel_file_path, plaza_name)
 
     
 

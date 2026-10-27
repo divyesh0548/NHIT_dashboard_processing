@@ -1000,16 +1000,17 @@ def process_and_update_db(input_file_path, plaza_name, output_file_path=None):
     return stats
 
 
-def process_plazas_from_reference_excel(excel_file_path, from_date, to_date, base_folder="All_life_cycles"):
+def process_plazas_from_reference_excel(excel_file_path, base_folder="All_life_cycles"):
     """
     Process plazas from reference Excel file row by row.
     Similar to IDFC downloader flow: skip rows marked 'done', process pending rows,
     and mark 'Done' only after successful DB update.
 
+    Dates are taken from Reader Read Time inside the lifecycle reports.
+    Old violation_amt values are cleared only across that discovered date span.
+
     Args:
         excel_file_path: Path to reference Excel file
-        from_date: Hardcoded start date for delete_violation_amt
-        to_date: Hardcoded end date for delete_violation_amt
         base_folder: Base folder containing extracted life cycle folders
 
     Returns:
@@ -1088,7 +1089,7 @@ def process_plazas_from_reference_excel(excel_file_path, from_date, to_date, bas
             print(f"Plaza_name_IDFC (folder): {plaza_name_idfc}")
             print(f"Plaza_name_DB (database): {plaza_name_db}")
             print(f"Folder path: {folder_path}")
-            print(f"Hardcoded date range: {from_date} to {to_date}")
+            print("Dates will be taken from Reader Read Time in the reports.")
             print("=" * 80)
 
             if not os.path.isdir(folder_path):
@@ -1096,17 +1097,21 @@ def process_plazas_from_reference_excel(excel_file_path, from_date, to_date, bas
                 fail_count += 1
                 continue
 
-            # Step 1: delete old violation_amt for date range
-            delete_stats = delete_violation_amt(plaza_name_db, from_date, to_date)
-            if not delete_stats.get('success', False):
-                print(f"Failed delete step for row {idx + 2}. Skipping.")
-                fail_count += 1
-                continue
-
-            # Step 2: process extracted files
+            # Step 1: process extracted files (dates come from the reports)
             combined_totals = process_folder_excel_files(folder_path)
             if combined_totals is None:
                 print(f"Failed processing folder for row {idx + 2}. Skipping.")
+                fail_count += 1
+                continue
+
+            report_dates = sorted(combined_totals)
+            from_date, to_date = report_dates[0], report_dates[-1]
+            print(f"Report date span: {from_date} to {to_date} ({len(report_dates)} date(s))")
+
+            # Step 2: delete old violation_amt for the dates found in the reports
+            delete_stats = delete_violation_amt(plaza_name_db, from_date, to_date)
+            if not delete_stats.get('success', False):
+                print(f"Failed delete step for row {idx + 2}. Skipping.")
                 fail_count += 1
                 continue
 
@@ -1155,18 +1160,12 @@ def main():
     #     print("\nNOTE: This script only processes files. Database updates must be done separately.")
     #     return
 
-    # Hardcoded date range (Excel Date column is intentionally ignored)
-    # from_date = "2025-11-11"
-    from_date = "2026-07-07"
-    to_date = "2026-08-09"
-
-    # Reference file (same file used by IDFC flow)
+    # Reference file (same file used by IDFC flow).
+    # Dates are read from Reader Read Time inside each lifecycle report.
     excel_file_path = "Reference_File.xlsx"
 
     success = process_plazas_from_reference_excel(
         excel_file_path=excel_file_path,
-        from_date=from_date,
-        to_date=to_date,
         base_folder="YES July7_to_Aug9"
         # base_folder="ICICI Bank Files"
     )

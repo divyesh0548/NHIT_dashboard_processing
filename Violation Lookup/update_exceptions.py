@@ -312,18 +312,18 @@ if __name__ == "__main__":
     # ============================================================================
     # CONFIGURATION
     # ============================================================================
-    excel_file_path = "bassi_combined_2025-11-23_to_2026-02-15.xlsx"
-    plaza_name = "bahadrabad"
+    excel_file_path = "odhaki_paipkhar_combined_2026-06-01_to_2026-07-31.xlsx"
+    plaza_name = "odhaki_paipkhar"
     # ============================================================================
 
     print(f"Input Excel File: {excel_file_path}")
     print(f"Plaza Name: {plaza_name}")
 
-    clear_exceptions(plaza_name, "2025-11-23", "2026-05-25")
+    clear_exceptions(plaza_name, "2026-06-01", "2026-07-31")
 
     # Step 1: Remove duplicates based on 'CCH TXN NO'
-    # df = remove_duplicates(excel_file_path)
+    df = remove_duplicates(excel_file_path)
 
     # Step 2: Update exceptions in DB for each (date, shift) combination
-    # update_exceptions_in_db(df, plaza_name)
+    update_exceptions_in_db(df, plaza_name)
 
